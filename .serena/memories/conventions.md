@@ -22,7 +22,7 @@
 ## Branches, commits, PRs
 - Branch names: `feat/TICKET-desc`, `fix/TICKET-desc`, `chore/desc`. Ticket key = `TRIP-<n>`.
 - PR title includes the ticket key. One ticket = one branch = one PR.
-- Run the AI code reviewer (`~/Desktop/career-improvement/ai-code-reviewer`) on the PR before merge;
+- Run the AI code reviewer on the PR before merge;
   it checks code quality *and* requirement fulfillment against the ticket's acceptance criteria —
   which is why `docs/backlog.md` writes ACs as checkable assertions.
 - Never `git commit --no-verify` without a stated reason.

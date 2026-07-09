@@ -23,7 +23,7 @@ no-op rather than fail. Use the real equivalents until someone adds the scripts:
 ## Git / workflow
 - Hooks live in `.githooks` (`git config core.hooksPath` is set to it), not `.git/hooks`.
 - `.gitattributes` routes `*.ts,tsx,js,json,css,yml,…` through the **mergiraf** merge driver
-  (registered globally by `~/dev-kit/setup.sh`). Conflicts it can't resolve are left with markers.
+  (registered globally by the dev-kit setup script, outside this repo). Conflicts it can't resolve are left with markers.
 - Regenerate the driver list: `mergiraf languages --gitattributes`
 
 ## Darwin (macOS) shell differences
