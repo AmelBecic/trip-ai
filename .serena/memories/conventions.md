@@ -15,9 +15,9 @@
   (landmarks, headings, `aria-describedby` on field errors, labels on all controls, AA contrast).
 
 ## Architecture
-- Validation logic lives outside components so it stays unit-testable (TRIP-9).
+- Validation logic lives outside components so it stays unit-testable (TRIP-10).
 - Persistence (saved trips) sits behind its own isolated layer so localStorage can become a
-  backend later (TRIP-18) — same reasoning as the `src/lib/data/` seam.
+  backend later (TRIP-19) — same reasoning as the `src/lib/data/` seam.
 
 ## Branches, commits, PRs
 - Branch names: `feat/TICKET-desc`, `fix/TICKET-desc`, `chore/desc`. Ticket key = `TRIP-<n>`.

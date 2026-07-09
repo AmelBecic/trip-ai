@@ -20,10 +20,10 @@ differ from pre-16 knowledge. Heed deprecation notices.
 
 **Tailwind v4 is CSS-first.** There is no `tailwind.config.{js,ts}` and you should not create one.
 Theme tokens are declared in `src/app/globals.css` via `@import "tailwindcss"` + an `@theme inline`
-block mapping `--color-*` / `--font-*` to CSS variables. TRIP-1 extends this block with brand,
+block mapping `--color-*` / `--font-*` to CSS variables. TRIP-2 extends this block with brand,
 neutral, and semantic budget colors (under / near / over cap).
 
-**Dark mode** must work via `prefers-color-scheme` *and* a `data-theme` override (TRIP-1 AC).
+**Dark mode** must work via `prefers-color-scheme` *and* a `data-theme` override (TRIP-2 AC).
 `globals.css` currently only does the media-query half.
 
 ## Config facts

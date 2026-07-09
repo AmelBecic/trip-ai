@@ -6,7 +6,7 @@ Currently a bare `create-next-app` scaffold + a dev-kit workflow layer. Feature 
 ## Source map
 - `src/app/` — App Router. Only `layout.tsx` (fonts + metadata) and `page.tsx` (default CNA landing) exist.
 - `src/app/globals.css` — Tailwind v4 entrypoint; design tokens live here, not in a JS config.
-- `docs/backlog.md` — TRIP-1..TRIP-20 sprint backlog with acceptance criteria. **Requirements source of truth is the Jira ticket**; the backlog mirrors it.
+- `docs/backlog.md` — TRIP-2..TRIP-21 sprint backlog under epic TRIP-1, with acceptance criteria. **Requirements source of truth is the Jira ticket**; the backlog mirrors it.
 - `docs/workflow.md` — the branch → PR → review → merge loop.
 - `.githooks/pre-commit` — secret/lint/typecheck gate. `.github/workflows/ci.yml` — same gates + `npm audit`.
 
