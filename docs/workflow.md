@@ -27,7 +27,7 @@ Scaffolded with dev-kit. This is how work flows through this repo.
 | Purpose            | Command                              |
 |--------------------|--------------------------------------|
 | Secret scan now    | `npm run secrets` / `gitleaks detect`|
-| Lint / types       | `npm run lint` · `npm run typecheck` |
+| Lint / types / tests | `npm run lint` · `npm run typecheck` · `npm run test` |
 | Metrics dashboard  | `~/dev-kit/cockpit.sh [today\|week\|month]` |
 | Live usage window  | `npx ccusage blocks`                 |
 
