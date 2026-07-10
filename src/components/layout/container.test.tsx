@@ -53,7 +53,12 @@ test("lets a caller override a conflicting base utility", () => {
   expect(classes).toContain("mx-auto");
 });
 
-test("lets a caller drop the base padding for a full-bleed section", () => {
+/*
+ * twMerge groups by variant, so `px-0` only displaces the unprefixed `px-4`.
+ * The responsive steps survive and the section is still padded at >=640px.
+ * A caller that wants true full bleed has to zero out every breakpoint.
+ */
+test("overriding base padding only replaces the matching variant", () => {
   render(
     <Container className="px-0">
       <p>content</p>
@@ -64,4 +69,24 @@ test("lets a caller drop the base padding for a full-bleed section", () => {
 
   expect(classes).toContain("px-0");
   expect(classes).not.toContain("px-4");
+  expect(classes).toEqual(expect.arrayContaining(["sm:px-6", "md:px-8", "lg:px-12"]));
+});
+
+test("a full-bleed caller must zero every breakpoint", () => {
+  render(
+    <Container className="px-0 sm:px-0 md:px-0 lg:px-0">
+      <p>content</p>
+    </Container>,
+  );
+
+  const classes = classesOf("content");
+
+  expect(classes).toEqual(
+    expect.arrayContaining(["px-0", "sm:px-0", "md:px-0", "lg:px-0"]),
+  );
+
+  // Each individually: arrayContaining under .not passes if any one is missing.
+  for (const padded of ["px-4", "sm:px-6", "md:px-8", "lg:px-12"]) {
+    expect(classes).not.toContain(padded);
+  }
 });

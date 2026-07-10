@@ -42,7 +42,13 @@ export default function RootLayout({
           Skip to content
         </a>
         <SiteHeader />
-        <main id="main-content" className="flex-1">
+        {/*
+         * tabIndex={-1} makes <main> a valid target for the skip link without
+         * putting it in the tab order. Fragment navigation only moves focus to
+         * a focusable element; without this, Safari scrolls but leaves focus in
+         * the header, so the next Tab returns to the nav the link just skipped.
+         */}
+        <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
           <Container className="py-8 md:py-12">{children}</Container>
         </main>
         <SiteFooter />
