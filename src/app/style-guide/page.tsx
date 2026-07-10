@@ -140,160 +140,158 @@ function Swatch({ name, className }: { name: string; className: string }) {
 
 export default function StyleGuide() {
   return (
-    <div className="flex flex-1 flex-col bg-background font-sans">
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-12 px-6 py-16">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold text-foreground">
-              Style guide
-            </h1>
-            <p className="max-w-xl text-base text-muted-foreground">
-              Every token below flips with the color scheme. Use the utilities,
-              never a literal hex or px value.
-            </p>
-          </div>
-          <ThemeToggle />
-        </header>
+    <div className="flex flex-col gap-12">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-semibold text-foreground">
+            Style guide
+          </h1>
+          <p className="max-w-xl text-base text-muted-foreground">
+            Every token below flips with the color scheme. Use the utilities,
+            never a literal hex or px value.
+          </p>
+        </div>
+        <ThemeToggle />
+      </header>
 
-        <Section
-          title="Brand"
-          description="Fixed ramp. Semantic tokens pick the step that reads correctly in each scheme."
-        >
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-11">
-            {BRAND_RAMP.map(([name, className]) => (
-              <Swatch key={name} name={name} className={className} />
-            ))}
-          </div>
-        </Section>
+      <Section
+        title="Brand"
+        description="Fixed ramp. Semantic tokens pick the step that reads correctly in each scheme."
+      >
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-11">
+          {BRAND_RAMP.map(([name, className]) => (
+            <Swatch key={name} name={name} className={className} />
+          ))}
+        </div>
+      </Section>
 
-        <Section
-          title="Neutral"
-          description="Greys used for surfaces, borders, and body text."
-        >
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-11">
-            {NEUTRAL_RAMP.map(([name, className]) => (
-              <Swatch key={name} name={name} className={className} />
-            ))}
-          </div>
-        </Section>
+      <Section
+        title="Neutral"
+        description="Greys used for surfaces, borders, and body text."
+      >
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-11">
+          {NEUTRAL_RAMP.map(([name, className]) => (
+            <Swatch key={name} name={name} className={className} />
+          ))}
+        </div>
+      </Section>
 
-        <Section
-          title="Semantic surfaces"
-          description="These invert between light and dark; reach for them instead of the raw ramps."
-        >
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {SURFACES.map(([name, className]) => (
-              <Swatch key={name} name={name} className={className} />
-            ))}
-          </div>
-        </Section>
+      <Section
+        title="Semantic surfaces"
+        description="These invert between light and dark; reach for them instead of the raw ramps."
+      >
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {SURFACES.map(([name, className]) => (
+            <Swatch key={name} name={name} className={className} />
+          ))}
+        </div>
+      </Section>
 
-        <Section
-          title="Budget states"
-          description="Spend against the trip cap: comfortably under, approaching, or past it."
-        >
-          <div className="grid gap-4 sm:grid-cols-3">
-            {BUDGET_STATES.map(({ label, token, fill, badge }) => (
-              <div
-                key={token}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-card"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-foreground">
-                    {label}
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge}`}
-                  >
-                    {label}
-                  </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
-                  <div className={`h-full w-2/3 ${fill}`} aria-hidden />
-                </div>
-                <code className="font-mono text-xs text-muted-foreground">
-                  {token}
-                </code>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Section
-          title="Typography"
-          description="Each step carries its own line height; the display sizes also tighten tracking."
-        >
-          <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-6">
-            {TYPE_SCALE.map(([name, className]) => (
-              <div
-                key={name}
-                className="flex flex-wrap items-baseline justify-between gap-4"
-              >
-                <span className={`text-foreground ${className}`}>
-                  Kyoto in seven days
+      <Section
+        title="Budget states"
+        description="Spend against the trip cap: comfortably under, approaching, or past it."
+      >
+        <div className="grid gap-4 sm:grid-cols-3">
+          {BUDGET_STATES.map(({ label, token, fill, badge }) => (
+            <div
+              key={token}
+              className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 shadow-card"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium text-foreground">
+                  {label}
                 </span>
-                <code className="font-mono text-xs text-muted-foreground">
-                  {name}
-                </code>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge}`}
+                >
+                  {label}
+                </span>
               </div>
-            ))}
-          </div>
-        </Section>
+              <div className="h-2 overflow-hidden rounded-full bg-surface-muted">
+                <div className={`h-full w-2/3 ${fill}`} aria-hidden />
+              </div>
+              <code className="font-mono text-xs text-muted-foreground">
+                {token}
+              </code>
+            </div>
+          ))}
+        </div>
+      </Section>
 
-        <Section
-          title="Spacing"
-          description="A 0.25rem base step. Multiples drive padding, gaps, and sizing."
-        >
-          <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-6">
-            {SPACING_STEPS.map(([name, className]) => (
-              <div key={name} className="flex items-center gap-3">
-                <code className="w-8 font-mono text-xs text-muted-foreground">
-                  {name}
-                </code>
-                <div className={`h-3 rounded-sm bg-brand ${className}`} />
-              </div>
-            ))}
-          </div>
-        </Section>
+      <Section
+        title="Typography"
+        description="Each step carries its own line height; the display sizes also tighten tracking."
+      >
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-6">
+          {TYPE_SCALE.map(([name, className]) => (
+            <div
+              key={name}
+              className="flex flex-wrap items-baseline justify-between gap-4"
+            >
+              <span className={`text-foreground ${className}`}>
+                Kyoto in seven days
+              </span>
+              <code className="font-mono text-xs text-muted-foreground">
+                {name}
+              </code>
+            </div>
+          ))}
+        </div>
+      </Section>
 
-        <Section
-          title="Radius"
-          description="Corner rounding, from input fields up to modal surfaces."
-        >
-          <div className="grid grid-cols-3 gap-4 sm:grid-cols-6">
-            {RADII.map(([name, className]) => (
-              <div key={name} className="flex flex-col gap-2">
-                <div
-                  className={`h-16 border border-border-strong bg-surface-muted ${className}`}
-                  aria-hidden
-                />
-                <code className="font-mono text-xs text-muted-foreground">
-                  {name}
-                </code>
-              </div>
-            ))}
-          </div>
-        </Section>
+      <Section
+        title="Spacing"
+        description="A 0.25rem base step. Multiples drive padding, gaps, and sizing."
+      >
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-6">
+          {SPACING_STEPS.map(([name, className]) => (
+            <div key={name} className="flex items-center gap-3">
+              <code className="w-8 font-mono text-xs text-muted-foreground">
+                {name}
+              </code>
+              <div className={`h-3 rounded-sm bg-brand ${className}`} />
+            </div>
+          ))}
+        </div>
+      </Section>
 
-        <Section
-          title="Elevation"
-          description="Ambient occlusion in light, depth in dark. The shadow color is itself a token."
-        >
-          <div className="grid gap-6 sm:grid-cols-3">
-            {SHADOWS.map(([name, className]) => (
-              <div key={name} className="flex flex-col gap-2">
-                <div
-                  className={`h-24 rounded-lg bg-surface-raised ${className}`}
-                  aria-hidden
-                />
-                <code className="font-mono text-xs text-muted-foreground">
-                  {name}
-                </code>
-              </div>
-            ))}
-          </div>
-        </Section>
-      </main>
+      <Section
+        title="Radius"
+        description="Corner rounding, from input fields up to modal surfaces."
+      >
+        <div className="grid grid-cols-3 gap-4 sm:grid-cols-6">
+          {RADII.map(([name, className]) => (
+            <div key={name} className="flex flex-col gap-2">
+              <div
+                className={`h-16 border border-border-strong bg-surface-muted ${className}`}
+                aria-hidden
+              />
+              <code className="font-mono text-xs text-muted-foreground">
+                {name}
+              </code>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section
+        title="Elevation"
+        description="Ambient occlusion in light, depth in dark. The shadow color is itself a token."
+      >
+        <div className="grid gap-6 sm:grid-cols-3">
+          {SHADOWS.map(([name, className]) => (
+            <div key={name} className="flex flex-col gap-2">
+              <div
+                className={`h-24 rounded-lg bg-surface-raised ${className}`}
+                aria-hidden
+              />
+              <code className="font-mono text-xs text-muted-foreground">
+                {name}
+              </code>
+            </div>
+          ))}
+        </div>
+      </Section>
     </div>
   );
 }
