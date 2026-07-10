@@ -8,7 +8,8 @@ Currently a bare `create-next-app` scaffold + a dev-kit workflow layer. Feature 
 - `src/app/globals.css` — Tailwind v4 entrypoint; design tokens live here, not in a JS config.
 - `docs/backlog.md` — TRIP-2..TRIP-21 sprint backlog under epic TRIP-1, with acceptance criteria. **Requirements source of truth is the Jira ticket**; the backlog mirrors it.
 - `docs/workflow.md` — the branch → PR → review → merge loop.
-- `.githooks/pre-commit` — secret/lint/typecheck gate. `.github/workflows/ci.yml` — same gates + `npm audit`.
+- `.githooks/pre-commit` — secret/lint/typecheck gate. `.github/workflows/ci.yml` — same gates + `test` + `npm audit`.
+- `vitest.config.mts` — Vitest/jsdom setup; tests are colocated as `src/**/*.test.tsx`.
 
 ## Planned structure (per backlog, not yet created)
 - `src/lib/types.ts` — domain contracts: `TripSearch`, `Itinerary`, `Flight`, `Hotel`, `BudgetBreakdown`, `Constraint`.
