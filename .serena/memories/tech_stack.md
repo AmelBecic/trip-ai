@@ -9,7 +9,8 @@
 | ESLint | v9 flat config (`eslint.config.mjs`), `eslint-config-next` core-web-vitals + typescript |
 | Package manager | **npm** (`package-lock.json`) |
 | Node in CI | 20 |
-| Test runner | **none installed** |
+| Test runner | **Vitest** + jsdom + Testing Library (`vitest.config.mts`) |
+| Secret scan | gitleaks CLI, pinned **8.30.1** + sha256 in `ci.yml` |
 
 ## Traps — these break training-data assumptions
 
