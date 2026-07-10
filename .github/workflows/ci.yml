@@ -12,10 +12,38 @@ jobs:
         with:
           fetch-depth: 0   # gitleaks needs full history
 
+      # Scans the full history with the gitleaks CLI rather than gitleaks-action,
+      # whose push-event commit range (`<before>^..<after>`) is unresolvable on a
+      # root commit and silently degrades to a 0-byte scan.
       - name: Secret scan (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          set -euo pipefail
+
+          if [ "$(git rev-parse --is-shallow-repository)" != "false" ]; then
+            echo "::error::shallow clone — gitleaks would scan only part of the history"
+            exit 1
+          fi
+
+          tarball="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl -sSfL -o "$tarball" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "$GITLEAKS_SHA256  $tarball" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          tar -xzf "$tarball" -C "$RUNNER_TEMP/gitleaks" gitleaks
+
+          "$RUNNER_TEMP/gitleaks/gitleaks" detect \
+            --source . --no-banner --no-color --redact --exit-code 1 2>&1 | tee "$RUNNER_TEMP/gitleaks.log"
+
+          # A pass is only meaningful if the scan actually covered commits.
+          commits="$(sed -n 's/.*[^0-9]\([0-9]\{1,\}\) commits scanned.*/\1/p' "$RUNNER_TEMP/gitleaks.log" | tail -1)"
+          if [ -z "$commits" ] || [ "$commits" -lt 1 ]; then
+            echo "::error::gitleaks reported no commits scanned — the secret scan did not run"
+            exit 1
+          fi
+          echo "gitleaks scanned $commits commits"
 
       - uses: actions/setup-node@v4
         with:
@@ -24,14 +52,16 @@ jobs:
 
       - run: npm ci
 
+      # No --if-present: a missing script means the gate vanished, which must fail.
       - name: Lint
-        run: npm run lint --if-present
+        run: npm run lint
 
       - name: Typecheck
-        run: npm run typecheck --if-present
+        run: npm run typecheck
 
       - name: Test
-        run: npm run test --if-present
+        run: npm run test
 
+      # Advisory only — a new upstream advisory must not redden an unrelated PR.
       - name: Dependency audit
         run: npm audit --audit-level=high || true

@@ -18,11 +18,16 @@ else
   printf "\033[33m! gitleaks not installed — skipping secret scan (run ~/dev-kit/setup.sh)\033[0m\n"
 fi
 
-# 2. Lint + typecheck — only if defined AND deps are installed
+# 2. Lint + typecheck — required when deps are installed.
+# A missing script is a failure, not a skip: silently passing is what let the
+# typecheck gate go unenforced for the whole scaffold.
 if [ -f package.json ] && [ -d node_modules ]; then
   has() { node -e "process.exit(require('./package.json').scripts?.['$1']?0:1)" 2>/dev/null; }
-  if has lint;      then npm run -s lint      || fail "lint failed";      ok "lint"; fi
-  if has typecheck; then npm run -s typecheck || fail "typecheck failed"; ok "typecheck"; fi
+  for script in lint typecheck; do
+    has "$script" || fail "package.json defines no \"$script\" script — see CLAUDE.md quality gates"
+  done
+  npm run -s lint      || fail "lint failed";      ok "lint"
+  npm run -s typecheck || fail "typecheck failed"; ok "typecheck"
 elif [ -f package.json ]; then
   printf "\033[33m! node_modules missing — skipping lint/typecheck (run npm install)\033[0m\n"
 fi
