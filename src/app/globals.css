@@ -1,26 +1,208 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens (TRIP-2).
+ *
+ * Raw values live on :root and flip with light-dark(); the @theme inline block
+ * below only maps them onto Tailwind's namespaces. Components should reference
+ * the utilities (bg-surface, text-budget-over, rounded-lg) and never a literal
+ * hex or px value.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light dark;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/*
+ * The `dark:` variant follows the same resolution order as light-dark():
+ * an explicit data-theme wins, otherwise the OS preference decides.
+ */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:not([data-theme="light"], [data-theme="light"] *)) {
+      @slot;
+    }
+  }
+
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+:root {
+  /* Brand ramp — fixed across schemes, semantic tokens pick the right step. */
+  --brand-50: oklch(0.977 0.013 202);
+  --brand-100: oklch(0.951 0.026 202);
+  --brand-200: oklch(0.905 0.052 202);
+  --brand-300: oklch(0.842 0.084 202);
+  --brand-400: oklch(0.762 0.113 202);
+  --brand-500: oklch(0.685 0.127 202);
+  --brand-600: oklch(0.596 0.115 202);
+  --brand-700: oklch(0.508 0.098 202);
+  --brand-800: oklch(0.424 0.08 202);
+  --brand-900: oklch(0.352 0.064 202);
+  --brand-950: oklch(0.245 0.046 202);
+
+  /* Neutral ramp. */
+  --neutral-50: oklch(0.985 0.002 250);
+  --neutral-100: oklch(0.967 0.003 250);
+  --neutral-200: oklch(0.925 0.005 250);
+  --neutral-300: oklch(0.868 0.007 250);
+  --neutral-400: oklch(0.704 0.011 250);
+  --neutral-500: oklch(0.556 0.012 250);
+  --neutral-600: oklch(0.444 0.012 250);
+  --neutral-700: oklch(0.372 0.012 250);
+  --neutral-800: oklch(0.279 0.012 250);
+  --neutral-900: oklch(0.211 0.011 250);
+  --neutral-950: oklch(0.145 0.009 250);
+
+  /* Surfaces & text. */
+  --background: light-dark(var(--neutral-50), var(--neutral-950));
+  --foreground: light-dark(var(--neutral-900), var(--neutral-100));
+  --muted-foreground: light-dark(var(--neutral-600), var(--neutral-400));
+  --surface: light-dark(#ffffff, var(--neutral-900));
+  --surface-muted: light-dark(var(--neutral-100), var(--neutral-800));
+  --surface-raised: light-dark(#ffffff, var(--neutral-800));
+  --border: light-dark(var(--neutral-200), var(--neutral-800));
+  --border-strong: light-dark(var(--neutral-300), var(--neutral-700));
+  --ring: light-dark(var(--brand-600), var(--brand-400));
+
+  /* Brand accent. */
+  --brand: light-dark(var(--brand-600), var(--brand-400));
+  --brand-foreground: light-dark(#ffffff, var(--neutral-950));
+
+  /*
+   * Budget states. `under` = comfortably below cap, `near` = approaching it,
+   * `over` = past it. Each has a fill, a subtle surface, and text readable on
+   * that surface.
+   */
+  --budget-under: light-dark(oklch(0.55 0.13 152), oklch(0.72 0.15 152));
+  --budget-under-surface: light-dark(oklch(0.95 0.04 152), oklch(0.28 0.05 152));
+  --budget-under-foreground: light-dark(oklch(0.38 0.1 152), oklch(0.88 0.09 152));
+
+  --budget-near: light-dark(oklch(0.68 0.15 75), oklch(0.8 0.15 75));
+  --budget-near-surface: light-dark(oklch(0.96 0.05 75), oklch(0.3 0.06 75));
+  --budget-near-foreground: light-dark(oklch(0.44 0.11 60), oklch(0.9 0.09 80));
+
+  --budget-over: light-dark(oklch(0.58 0.2 25), oklch(0.7 0.19 25));
+  --budget-over-surface: light-dark(oklch(0.95 0.03 25), oklch(0.3 0.08 25));
+  --budget-over-foreground: light-dark(oklch(0.44 0.17 25), oklch(0.88 0.09 25));
+
+  /* Shadows read as ambient occlusion in light, as depth in dark. */
+  --shadow-color: light-dark(oklch(0.145 0.009 250 / 0.08), oklch(0 0 0 / 0.5));
+  --shadow-color-strong: light-dark(
+    oklch(0.145 0.009 250 / 0.12),
+    oklch(0 0 0 / 0.7)
+  );
+}
+
+@theme inline {
+  --color-*: initial;
+
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-100: var(--neutral-100);
+  --color-neutral-200: var(--neutral-200);
+  --color-neutral-300: var(--neutral-300);
+  --color-neutral-400: var(--neutral-400);
+  --color-neutral-500: var(--neutral-500);
+  --color-neutral-600: var(--neutral-600);
+  --color-neutral-700: var(--neutral-700);
+  --color-neutral-800: var(--neutral-800);
+  --color-neutral-900: var(--neutral-900);
+  --color-neutral-950: var(--neutral-950);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ring: var(--ring);
+
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+
+  --color-budget-under: var(--budget-under);
+  --color-budget-under-surface: var(--budget-under-surface);
+  --color-budget-under-foreground: var(--budget-under-foreground);
+  --color-budget-near: var(--budget-near);
+  --color-budget-near-surface: var(--budget-near-surface);
+  --color-budget-near-foreground: var(--budget-near-foreground);
+  --color-budget-over: var(--budget-over);
+  --color-budget-over-surface: var(--budget-over-surface);
+  --color-budget-over-foreground: var(--budget-over-foreground);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.875rem;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 2.125rem;
+  --text-2xl--letter-spacing: -0.01em;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 2.5rem;
+  --text-3xl--letter-spacing: -0.02em;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 3.25rem;
+  --text-4xl--letter-spacing: -0.03em;
+
+  --spacing: 0.25rem;
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  --shadow-card: 0 1px 2px 0 var(--shadow-color-strong),
+    0 1px 3px 0 var(--shadow-color);
+  --shadow-raised: 0 2px 4px -1px var(--shadow-color-strong),
+    0 4px 12px -2px var(--shadow-color);
+  --shadow-overlay: 0 8px 16px -4px var(--shadow-color-strong),
+    0 16px 40px -8px var(--shadow-color);
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
 }
