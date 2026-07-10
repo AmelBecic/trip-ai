@@ -45,3 +45,31 @@ test("the theme toggle drives the data-theme override on <html>", () => {
   fireEvent.click(screen.getByRole("button", { name: "system" }));
   expect(document.documentElement.dataset.theme).toBeUndefined();
 });
+
+test("mounting leaves an existing override untouched", () => {
+  document.documentElement.dataset.theme = "dark";
+
+  render(<StyleGuide />);
+
+  expect(document.documentElement.dataset.theme).toBe("dark");
+});
+
+test("unmounting restores the override that was there on mount", () => {
+  const { unmount } = render(<StyleGuide />);
+
+  fireEvent.click(screen.getByRole("button", { name: "dark" }));
+  expect(document.documentElement.dataset.theme).toBe("dark");
+
+  unmount();
+  expect(document.documentElement.dataset.theme).toBeUndefined();
+});
+
+test("unmounting does not strip an override it did not set", () => {
+  document.documentElement.dataset.theme = "light";
+
+  const { unmount } = render(<StyleGuide />);
+  fireEvent.click(screen.getByRole("button", { name: "dark" }));
+  unmount();
+
+  expect(document.documentElement.dataset.theme).toBe("light");
+});
