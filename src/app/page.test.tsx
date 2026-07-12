@@ -4,12 +4,13 @@ import Home from "./page";
 
 afterEach(cleanup);
 
-test("renders the heading and the primary actions", () => {
+test("renders the heading and a live path into the planning flow", () => {
   render(<Home />);
 
   expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(
-    "edit the page.tsx file",
+    "Plan budget-aware trips",
   );
-  expect(screen.getByRole("link", { name: /deploy now/i })).toBeDefined();
-  expect(screen.getByRole("link", { name: /documentation/i })).toBeDefined();
+  expect(
+    screen.getByRole("link", { name: /plan a trip/i }).getAttribute("href"),
+  ).toBe("/plan");
 });
