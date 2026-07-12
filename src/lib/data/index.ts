@@ -74,6 +74,12 @@ function sumMoney(items: readonly Money[]): Money {
 }
 
 function statusFor(total: Money, cap: Money): BudgetStatus {
+  // Same guard sumMoney applies: a ratio across currencies is meaningless.
+  if (total.currency !== cap.currency) {
+    throw new Error(
+      `Cannot grade ${total.currency} spend against a ${cap.currency} cap: mixed currencies.`,
+    );
+  }
   const ratio = total.amount / cap.amount;
   if (ratio <= 0.85) return "under";
   if (ratio <= 1) return "near";

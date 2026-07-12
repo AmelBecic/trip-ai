@@ -70,6 +70,11 @@ test("budget total is the sum of its lines and carries the caller's cap", async 
   expect(trip.budget.cap).toEqual(usd(6500));
 });
 
+test("rejects a budget in a currency the trips are not priced in", async () => {
+  const eurBudget: TripSearch = { ...searchFor("KIX", 6500), budget: { amount: 600000, currency: "EUR" } };
+  await expect(searchTrips(eurBudget)).rejects.toThrow(/mixed currencies/);
+});
+
 test("getItinerary resolves a known id and null otherwise", async () => {
   const trip = await getItinerary("kix-lean");
   expect(trip?.id).toBe("kix-lean");
