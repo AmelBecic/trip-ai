@@ -19,6 +19,14 @@ import { ITINERARIES, type ItineraryFixture } from "./fixtures";
 
 const DEFAULT_LATENCY_MS = 600;
 
+/**
+ * Seam config is deliberately process-global, not per-request: it exists only
+ * to orchestrate demos and tests (slow the network down, force an outage), and
+ * every read observes whatever is set when it runs. It is NOT a place to carry
+ * per-call behaviour — flipping a toggle affects all in-flight and later reads,
+ * so drive it from a single place (a test's beforeEach, a demo control) and
+ * never from concurrent request handling. The real backend replaces all of it.
+ */
 let latencyMs = DEFAULT_LATENCY_MS;
 let shouldFail = false;
 
