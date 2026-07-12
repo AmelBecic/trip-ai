@@ -54,3 +54,61 @@ test("builds a TripSearch query and navigates to /results on submit", () => {
   expect(params.get("adults")).toBe("1");
   expect(params.get("cabin")).toBe("economy");
 });
+
+test("blocks submit and shows an accessible error when required fields are empty", () => {
+  render(<TripSearchForm />);
+
+  fireEvent.click(screen.getByRole("button", { name: /search trips/i }));
+
+  expect(nav.push).not.toHaveBeenCalled();
+
+  const origin = screen.getByLabelText(/origin/i);
+  expect(origin.getAttribute("aria-invalid")).toBe("true");
+  const describedBy = origin.getAttribute("aria-describedby");
+  expect(describedBy).toBe("origin-error");
+  expect(document.getElementById(describedBy!)?.textContent).toMatch(
+    /enter an origin/i,
+  );
+  // Focus lands on the first invalid control, not the submit button.
+  expect(document.activeElement).toBe(origin);
+});
+
+test("clears a field's error as soon as the user corrects it", () => {
+  render(<TripSearchForm />);
+
+  fireEvent.click(screen.getByRole("button", { name: /search trips/i }));
+  const origin = screen.getByLabelText(/origin/i);
+  expect(origin.getAttribute("aria-invalid")).toBe("true");
+
+  fireEvent.change(origin, { target: { value: "sfo" } });
+
+  expect(origin.getAttribute("aria-invalid")).toBeNull();
+  expect(screen.queryByText(/enter an origin/i)).toBeNull();
+});
+
+test("blocks submit when the end date precedes the start date", () => {
+  render(<TripSearchForm />);
+
+  fireEvent.change(screen.getByLabelText(/origin/i), {
+    target: { value: "sfo" },
+  });
+  fireEvent.change(screen.getByLabelText(/destination/i), {
+    target: { value: "kix" },
+  });
+  fireEvent.change(screen.getByLabelText(/start date/i), {
+    target: { value: "2026-11-10" },
+  });
+  fireEvent.change(screen.getByLabelText(/end date/i), {
+    target: { value: "2026-11-01" },
+  });
+  fireEvent.change(screen.getByLabelText(/^budget$/i), {
+    target: { value: "2000" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: /search trips/i }));
+
+  expect(nav.push).not.toHaveBeenCalled();
+  expect(screen.getByLabelText(/end date/i).getAttribute("aria-invalid")).toBe(
+    "true",
+  );
+});
