@@ -1,4 +1,16 @@
 import type { Metadata } from "next";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  Input,
+  Select,
+} from "@/components/ui";
 import { ThemeToggle } from "./theme-toggle";
 
 export const metadata: Metadata = {
@@ -290,6 +302,58 @@ export default function StyleGuide() {
               </code>
             </div>
           ))}
+        </div>
+      </Section>
+
+      <Section
+        title="Components"
+        description="The UI primitives every screen composes from. All variants are token-driven and flip with the scheme above."
+      >
+        <div className="flex flex-col gap-6 rounded-lg border border-border bg-surface p-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button>Primary</Button>
+            <Button variant="secondary">Secondary</Button>
+            <Button variant="ghost">Ghost</Button>
+            <Button loading>Loading</Button>
+            <Button disabled>Disabled</Button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-foreground">
+              Destination
+              <Input placeholder="Kyoto, Japan" />
+            </label>
+            <label className="flex flex-col gap-1.5 text-sm font-medium text-foreground">
+              Trip length
+              <Select defaultValue="7">
+                <option value="3">Weekend</option>
+                <option value="7">One week</option>
+                <option value="14">Two weeks</option>
+              </Select>
+            </label>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge>Neutral</Badge>
+            <Badge variant="brand">Brand</Badge>
+            <Badge variant="under">Under cap</Badge>
+            <Badge variant="near">Near cap</Badge>
+            <Badge variant="over">Over cap</Badge>
+          </div>
+
+          <Card className="max-w-sm">
+            <CardHeader>
+              <CardTitle>Kyoto in seven days</CardTitle>
+              <CardDescription>Late-autumn temples and food.</CardDescription>
+            </CardHeader>
+            <CardContent className="text-sm text-muted-foreground">
+              A card groups related content on a raised surface.
+            </CardContent>
+            <CardFooter>
+              <Button>Save</Button>
+              <Button variant="ghost">Dismiss</Button>
+            </CardFooter>
+          </Card>
         </div>
       </Section>
     </div>
