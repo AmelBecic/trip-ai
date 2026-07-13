@@ -174,12 +174,6 @@ const KYOTO: ItineraryFixture[] = [
         activities: [
           {
             id: "kix-classic-d1-a1",
-            name: "Check in at Hotel Kanra",
-            start: "2026-11-03T17:30:00+09:00",
-            location: "Shimogyo",
-          },
-          {
-            id: "kix-classic-d1-a2",
             name: "Evening stroll through Gion",
             start: "2026-11-03T19:30:00+09:00",
             location: "Gion",

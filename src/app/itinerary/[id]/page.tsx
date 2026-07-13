@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getItinerary } from "@/lib/data";
 import { minHotelRating } from "@/lib/hotel";
+import { buildTimeline } from "@/lib/itinerary";
 import { BudgetBar } from "./budget-bar";
 import { FlightList } from "./flight-list";
 import { HotelList } from "./hotel-list";
@@ -49,7 +50,7 @@ export default async function ItineraryDetail({
         minRating={minHotelRating(itinerary.search.constraints)}
       />
 
-      <Timeline days={itinerary.days} />
+      <Timeline days={buildTimeline(itinerary)} />
     </section>
   );
 }

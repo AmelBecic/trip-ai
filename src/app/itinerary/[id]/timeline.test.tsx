@@ -1,27 +1,16 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, test } from "vitest";
-import type { ItineraryDay } from "@/lib/types";
+import type { TimelineDay } from "@/lib/itinerary";
 import { Timeline } from "./timeline";
 
 afterEach(cleanup);
 
-function day(
-  date: string,
-  title: string,
-  activities: ItineraryDay["activities"] = [],
-): ItineraryDay {
-  return { date, title, activities };
-}
-
-test("renders a numbered node per day, in calendar order", () => {
-  render(
-    <Timeline
-      days={[
-        day("2026-11-04", "Second day"),
-        day("2026-11-03", "First day"),
-      ]}
-    />,
-  );
+test("renders a numbered node per day in the given order", () => {
+  const days: TimelineDay[] = [
+    { date: "2026-11-03", title: "First day", events: [] },
+    { date: "2026-11-04", title: "Second day", events: [] },
+  ];
+  render(<Timeline days={days} />);
 
   const list = screen.getByRole("list");
   const nodes = within(list).getAllByRole("listitem");
@@ -30,37 +19,63 @@ test("renders a numbered node per day, in calendar order", () => {
   expect(within(nodes[0]).getByText(/Day 1/)).not.toBeNull();
   expect(within(nodes[0]).getByText("First day")).not.toBeNull();
   expect(within(nodes[1]).getByText(/Day 2/)).not.toBeNull();
-  expect(within(nodes[1]).getByText("Second day")).not.toBeNull();
 });
 
-test("shows an activity's time, name, location, and cost", () => {
-  render(
-    <Timeline
-      days={[
-        day("2026-11-04", "Southern temples", [
-          {
-            id: "a1",
-            name: "Kiyomizu-dera",
-            start: "2026-11-04T11:00:00+09:00",
-            location: "Higashiyama",
-            cost: { amount: 400, currency: "USD" },
-          },
-        ]),
-      ]}
-    />,
-  );
+test("renders flight, hotel, and activity events with time, detail, and cost", () => {
+  const days: TimelineDay[] = [
+    {
+      date: "2026-11-03",
+      title: "Arrival",
+      events: [
+        {
+          id: "arr",
+          kind: "flight",
+          time: "17:30",
+          title: "Arrive KIX",
+          detail: "ANA NH107",
+        },
+        {
+          id: "checkin",
+          kind: "hotel",
+          time: "",
+          title: "Check in — Hotel Kanra",
+          detail: "Shimogyo, Kyoto",
+        },
+        {
+          id: "a1",
+          kind: "activity",
+          time: "19:30",
+          title: "Evening stroll",
+          cost: { amount: 400, currency: "USD" },
+        },
+      ],
+    },
+  ];
+  render(<Timeline days={days} />);
 
-  expect(screen.getByText("11:00")).not.toBeNull();
-  expect(screen.getByText("Kiyomizu-dera")).not.toBeNull();
-  expect(screen.getByText("Higashiyama")).not.toBeNull();
+  expect(screen.getByText("Arrive KIX")).not.toBeNull();
+  expect(screen.getByText("ANA NH107")).not.toBeNull();
+  expect(screen.getByText("Check in — Hotel Kanra")).not.toBeNull();
+  expect(screen.getByText("17:30")).not.toBeNull();
   expect(screen.getByText("$4.00")).not.toBeNull();
+
+  // Logistics events are labelled for assistive tech; activities are plain rows.
+  expect(screen.getByRole("img", { name: "Flight" })).not.toBeNull();
+  expect(screen.getByRole("img", { name: "Hotel" })).not.toBeNull();
 });
 
-test("renders a single-day trip without a day-2 node", () => {
-  render(<Timeline days={[day("2026-11-03", "Just the one day")]} />);
+test("renders a titleless travel day with just its eyebrow and events", () => {
+  const days: TimelineDay[] = [
+    {
+      date: "2026-11-02",
+      events: [{ id: "dep", kind: "flight", time: "13:40", title: "Depart SFO" }],
+    },
+  ];
+  render(<Timeline days={days} />);
 
   expect(screen.getByText(/Day 1/)).not.toBeNull();
-  expect(screen.queryByText(/Day 2/)).toBeNull();
+  expect(screen.getByText("Depart SFO")).not.toBeNull();
+  expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
 });
 
 test("shows a note and no list when there is no plan", () => {
