@@ -10,3 +10,4 @@ export {
   CardFooter,
 } from "./card";
 export { Badge, type BadgeProps, type BadgeVariant } from "./badge";
+export { Skeleton } from "./skeleton";
