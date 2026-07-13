@@ -1,0 +1,26 @@
+name: PR title
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+# The AI code reviewer parses the Jira key from the PR title to pull ticket
+# context; a title that does not start with a TRIP-<n> key leaves it with
+# nothing to fetch. Fail the check so the title gets fixed before merge.
+jobs:
+  title:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Require TRIP-<n> prefix
+        # The title is untrusted input — pass it via env, never interpolate a
+        # ${{ }} expression straight into the run script (shell injection).
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$PR_TITLE" | grep -Eq '^TRIP-[0-9]+'; then
+            echo "::error::PR title must start with a Jira key, e.g. 'TRIP-14 ...'. Got: '$PR_TITLE'"
+            exit 1
+          fi
+          echo "PR title OK: $PR_TITLE"
