@@ -1,61 +1,22 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import {
   Badge,
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui";
 import { searchTrips } from "@/lib/data";
-import type { BudgetStatus, CabinClass, Money, TripSearch } from "@/lib/types";
+import { formatMoney } from "@/lib/money";
+import type { BudgetBreakdown, BudgetStatus } from "@/lib/types";
+import { paramsToSearch, type SearchParams } from "./params-to-search";
 
 export const metadata: Metadata = {
   title: "Results",
 };
-
-type SearchParams = Record<string, string | string[] | undefined>;
-
-/** Repeated params collapse to their first value; the search contract is flat. */
-function first(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-/**
- * Read the flat query the search form writes (see `tripSearchToSearchParams`)
- * back into a TripSearch. Deliberately minimal — just enough to price the trips
- * — so this page can await `searchTrips` and exercise the loading skeleton.
- *
- * TODO(TRIP-12): owns the full, validated reverse mapping (cabin narrowing,
- * the minStars → constraint round-trip) and the rich itinerary overview.
- */
-function paramsToSearch(params: SearchParams): TripSearch {
-  return {
-    origin: first(params.origin) ?? "",
-    destination: (first(params.destination) ?? "").trim().toUpperCase(),
-    dates: { start: first(params.start) ?? "", end: first(params.end) ?? "" },
-    travelers: {
-      adults: Number(first(params.adults) ?? 1),
-      children: Number(first(params.children) ?? 0),
-    },
-    cabin: (first(params.cabin) as CabinClass) ?? "economy",
-    budget: {
-      amount: Number(first(params.budget) ?? 0),
-      currency: first(params.currency) ?? "USD",
-    },
-    constraints: [],
-  };
-}
-
-/** Minor units → a localized currency string, using the currency's own scale. */
-function formatMoney({ amount, currency }: Money): string {
-  const formatter = new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-  });
-  const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
-  return formatter.format(amount / 10 ** digits);
-}
 
 const STATUS_LABEL: Record<BudgetStatus, string> = {
   under: "Under budget",
@@ -63,11 +24,38 @@ const STATUS_LABEL: Record<BudgetStatus, string> = {
   over: "Over budget",
 };
 
+// Complete literals so Tailwind's scanner emits them — a `text-budget-${status}`
+// template would never be generated.
+const DELTA_CLASS: Record<BudgetStatus, string> = {
+  under: "text-budget-under",
+  near: "text-budget-near",
+  over: "text-budget-over",
+};
+
 /**
- * The results route. An async server component so navigation suspends on the
- * fixture latency and Next renders `loading.tsx` (the skeleton) meanwhile.
- * The itinerary cards here are intentionally thin — TRIP-12 builds the full
- * overview; the skeleton in ./results-skeleton.tsx tracks this shape.
+ * Spend against the cap, phrased for a human: how much is left, or how far over.
+ * Both amounts share a currency in this path (the fixtures price in USD and the
+ * cap is validated), but the guard keeps a mixed pair from producing nonsense.
+ */
+function budgetDelta({
+  total,
+  cap,
+  status,
+}: BudgetBreakdown): { label: string } | null {
+  if (total.currency !== cap.currency) return null;
+  const diff = cap.amount - total.amount;
+  if (status === "over") {
+    return { label: `${formatMoney({ amount: -diff, currency: cap.currency })} over` };
+  }
+  return { label: `${formatMoney({ amount: diff, currency: cap.currency })} to spare` };
+}
+
+/**
+ * The results route (TRIP-12). An async server component so navigation suspends
+ * on the fixture latency and Next renders `loading.tsx` (the skeleton) meanwhile.
+ * It reads the flat query into a validated `TripSearch`, prices it through the
+ * data layer, and lists each option with its cost against the budget and a
+ * select action into the full itinerary (fleshed out by TRIP-13–16).
  */
 export default async function Results({
   searchParams,
@@ -80,8 +68,8 @@ export default async function Results({
   try {
     itineraries = await searchTrips(search);
   } catch {
-    // The mock data prices only in USD; a mismatched-currency cap throws. Proper
-    // error UI is TRIP-12's — keep this from crashing the route meanwhile.
+    // A cap in a currency the fixtures don't price in makes searchTrips reject on
+    // mixed currencies. Proper error UI is TRIP-18's — keep the route standing.
     return (
       <section className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold text-foreground">Results</h1>
@@ -104,34 +92,63 @@ export default async function Results({
           {itineraries.length > 0
             ? `${itineraries.length} ${
                 itineraries.length === 1 ? "itinerary" : "itineraries"
-              } within your ${formatMoney(search.budget)} budget.`
+              } priced against your ${formatMoney(search.budget)} budget.`
             : "No itineraries matched — try a different destination or budget."}
         </p>
       </div>
 
       {itineraries.length > 0 ? (
         <ul className="grid gap-4">
-          {itineraries.map((itinerary) => (
-            <li key={itinerary.id}>
-              <Card>
-                <CardHeader>
-                  <CardTitle>{itinerary.summary}</CardTitle>
-                  <CardDescription>
-                    {itinerary.days.length}-day trip · {itinerary.hotels.length}{" "}
-                    {itinerary.hotels.length === 1 ? "stay" : "stays"}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    {formatMoney(itinerary.budget.total)} total
-                  </span>
-                  <Badge variant={itinerary.budget.status}>
-                    {STATUS_LABEL[itinerary.budget.status]}
-                  </Badge>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
+          {itineraries.map((itinerary) => {
+            const { budget } = itinerary;
+            const delta = budgetDelta(budget);
+            return (
+              <li key={itinerary.id}>
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col gap-1">
+                        <CardTitle>{itinerary.summary}</CardTitle>
+                        <CardDescription>
+                          {itinerary.days.length}-day trip ·{" "}
+                          {itinerary.hotels.length}{" "}
+                          {itinerary.hotels.length === 1 ? "stay" : "stays"} ·{" "}
+                          {itinerary.flights.length}{" "}
+                          {itinerary.flights.length === 1 ? "flight" : "flights"}
+                        </CardDescription>
+                      </div>
+                      <Badge variant={budget.status}>
+                        {STATUS_LABEL[budget.status]}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="text-2xl font-semibold text-foreground">
+                      {formatMoney(budget.total)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      of {formatMoney(budget.cap)} budget
+                    </span>
+                    {delta ? (
+                      <span
+                        className={`ml-auto text-sm font-medium ${DELTA_CLASS[budget.status]}`}
+                      >
+                        {delta.label}
+                      </span>
+                    ) : null}
+                  </CardContent>
+                  <CardFooter>
+                    <Link
+                      href={`/itinerary/${itinerary.id}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-medium text-brand-foreground transition-colors hover:bg-brand-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring dark:hover:bg-brand-300"
+                    >
+                      View itinerary
+                    </Link>
+                  </CardFooter>
+                </Card>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
     </section>
