@@ -75,6 +75,45 @@ test("rejects a budget in a currency the trips are not priced in", async () => {
   await expect(searchTrips(eurBudget)).rejects.toThrow(/mixed currencies/);
 });
 
+test("cabin acts as a comfort floor, not an exact match", async () => {
+  // Economy keeps every trip; business narrows to the one splurge option.
+  const economy = await searchTrips(searchFor("KIX", 6500));
+  expect(economy).toHaveLength(3);
+
+  const business = await searchTrips({
+    ...searchFor("KIX", 6500),
+    cabin: "business",
+  });
+  expect(business.map((it) => it.id)).toEqual(["kix-lux"]);
+});
+
+test("a min-hotel-rating constraint drops trips below the floor", async () => {
+  const results = await searchTrips({
+    ...searchFor("KIX", 6500),
+    constraints: [{ kind: "min-hotel-rating", rating: 5 }],
+  });
+
+  // kix-lean is a 4-star stay; the two 5-star trips remain.
+  expect(results.map((it) => it.id)).toEqual(["kix-classic", "kix-lux"]);
+});
+
+test("a max-stops constraint keeps only trips within the cap", async () => {
+  // Every fixture flies nonstop, so a 0-stop cap keeps them all…
+  const nonstop = await searchTrips({
+    ...searchFor("KIX", 6500),
+    constraints: [{ kind: "max-stops", stops: 0 }],
+  });
+  expect(nonstop).toHaveLength(3);
+});
+
+test("filters that match nothing yield the empty set", async () => {
+  const results = await searchTrips({
+    ...searchFor("KIX", 6500),
+    cabin: "first",
+  });
+  expect(results).toEqual([]);
+});
+
 test("getItinerary resolves a known id and null otherwise", async () => {
   const trip = await getItinerary("kix-lean");
   expect(trip?.id).toBe("kix-lean");

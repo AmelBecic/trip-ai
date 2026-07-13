@@ -2,6 +2,7 @@ import type {
   BudgetBreakdown,
   BudgetLine,
   BudgetStatus,
+  CabinClass,
   Flight,
   Hotel,
   Itinerary,
@@ -120,16 +121,64 @@ function build(fixture: ItineraryFixture, forSearch: TripSearch): Itinerary {
   };
 }
 
+/** Cabin comfort, low to high, so a requested cabin reads as a floor. */
+const CABIN_RANK: Record<CabinClass, number> = {
+  economy: 0,
+  premium_economy: 1,
+  business: 2,
+  first: 3,
+};
+
 /**
- * Trips for a destination, priced against the caller's budget cap — so the same
- * fixtures read as under-, near-, or over-budget depending on `input.budget`.
- * An unknown destination returns an empty set (the no-results state).
+ * Whether a trip satisfies the search's filters. Cabin is a comfort floor — a
+ * trip qualifies if it offers a flight at least as premium as requested, so
+ * asking for economy keeps everything and asking for business narrows to the
+ * splurge options. `constraints` are hard requirements (see `types.ts`): every
+ * hotel must clear a rating floor and every flight must stay within a stop cap.
+ * Budget is deliberately not a filter here — it re-prices the set (under/over)
+ * rather than removing trips, so an over-budget option stays visible.
+ */
+function matchesFilters(fixture: ItineraryFixture, input: TripSearch): boolean {
+  const floor = CABIN_RANK[input.cabin];
+  if (!fixture.flights.some((f) => CABIN_RANK[f.cabin] >= floor)) return false;
+
+  for (const constraint of input.constraints) {
+    switch (constraint.kind) {
+      case "min-hotel-rating":
+        if (!fixture.hotels.every((h) => h.rating >= constraint.rating)) {
+          return false;
+        }
+        break;
+      case "max-stops":
+        if (
+          !fixture.flights.every(
+            (f) => f.segments.length - 1 <= constraint.stops,
+          )
+        ) {
+          return false;
+        }
+        break;
+      // Remaining constraint kinds have no fixture data to filter on yet; they
+      // pass through untouched until the real backend can honour them.
+    }
+  }
+  return true;
+}
+
+/**
+ * Trips for a destination that satisfy the search's cabin and constraint
+ * filters, priced against the caller's budget cap — so the same fixtures read
+ * as under-, near-, or over-budget depending on `input.budget`. An unknown
+ * destination, or one where nothing clears the filters, returns an empty set
+ * (the no-results state).
  */
 export async function searchTrips(input: TripSearch): Promise<Itinerary[]> {
   await seam();
   const destination = input.destination.trim().toUpperCase();
   return ITINERARIES.filter(
-    (fixture) => fixture.baselineSearch.destination === destination,
+    (fixture) =>
+      fixture.baselineSearch.destination === destination &&
+      matchesFilters(fixture, input),
   ).map((fixture) => build(fixture, input));
 }
 

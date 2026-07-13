@@ -51,11 +51,20 @@ function toCurrency(value: string | undefined): SupportedCurrency {
 }
 
 export function paramsToSearch(params: SearchParams): TripSearch {
-  // minStars round-trips through a min-hotel-rating constraint (the only one the
-  // form serializes); 0 / absent means "no rating floor".
+  // Constraints round-trip through named params; each is present only when it
+  // actually narrows the search. Built in a fixed order (rating, then stops) so
+  // a serialize→parse round-trip yields a stable array.
+  const constraints: Constraint[] = [];
+  // minStars: 0 / absent means "no rating floor".
   const minStars = toInt(first(params.minStars), 0);
-  const constraints: Constraint[] =
-    minStars > 0 ? [{ kind: "min-hotel-rating", rating: minStars }] : [];
+  if (minStars > 0) {
+    constraints.push({ kind: "min-hotel-rating", rating: minStars });
+  }
+  // maxStops: absent means "no stop limit"; 0 is a real value (nonstop only).
+  const maxStops = first(params.maxStops);
+  if (maxStops !== undefined && maxStops !== "") {
+    constraints.push({ kind: "max-stops", stops: toInt(maxStops, 0) });
+  }
 
   return {
     origin: (first(params.origin) ?? "").trim().toUpperCase(),

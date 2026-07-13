@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import {
   Badge,
   Card,
@@ -11,8 +12,11 @@ import {
 } from "@/components/ui";
 import { searchTrips } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
-import type { BudgetBreakdown, BudgetStatus } from "@/lib/types";
+import { tripSearchToSearchParams } from "@/lib/search-params";
+import type { BudgetBreakdown, BudgetStatus, TripSearch } from "@/lib/types";
+import { FiltersSidebar } from "./filters-sidebar";
 import { paramsToSearch, type SearchParams } from "./params-to-search";
+import { ResultsSkeleton } from "./results-skeleton";
 
 export const metadata: Metadata = {
   title: "Results",
@@ -51,19 +55,13 @@ function budgetDelta({
 }
 
 /**
- * The results route (TRIP-12). An async server component so navigation suspends
- * on the fixture latency and Next renders `loading.tsx` (the skeleton) meanwhile.
- * It reads the flat query into a validated `TripSearch`, prices it through the
- * data layer, and lists each option with its cost against the budget and a
- * select action into the full itinerary (fleshed out by TRIP-13–16).
+ * The priced list for one search. Split out from the route shell so it can be
+ * the thing that suspends: the parent keys a Suspense boundary on the query, so
+ * every filter change re-runs this fetch behind `ResultsSkeleton` while the
+ * sidebar stays put. Exported for the route tests, which exercise the list
+ * directly with a parsed search.
  */
-export default async function Results({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
-  const search = paramsToSearch(await searchParams);
-
+export async function ResultsList({ search }: { search: TripSearch }) {
   let itineraries: Awaited<ReturnType<typeof searchTrips>>;
   try {
     itineraries = await searchTrips(search);
@@ -93,7 +91,7 @@ export default async function Results({
             ? `${itineraries.length} ${
                 itineraries.length === 1 ? "itinerary" : "itineraries"
               } priced against your ${formatMoney(search.budget)} budget.`
-            : "No itineraries matched — try a different destination or budget."}
+            : "No itineraries matched — try a different destination or loosening your filters."}
         </p>
       </div>
 
@@ -152,5 +150,34 @@ export default async function Results({
         </ul>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * The results route (TRIP-12), now with a filters sidebar (TRIP-17). Reads the
+ * flat query into a validated `TripSearch`, then lays out the sidebar beside the
+ * priced list. The list is wrapped in a Suspense boundary keyed on the query, so
+ * adjusting a filter (which rewrites the query) re-runs `searchTrips` behind the
+ * skeleton while the sidebar — outside the boundary — keeps its state.
+ */
+export default async function Results({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const search = paramsToSearch(await searchParams);
+  // A stable, order-independent identity for the current query, so the boundary
+  // re-suspends on any filter change and not on incidental param reordering.
+  const queryKey = tripSearchToSearchParams(search).toString();
+
+  return (
+    <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
+      <FiltersSidebar className="md:sticky md:top-8 md:w-64 md:shrink-0" />
+      <div className="min-w-0 flex-1">
+        <Suspense key={queryKey} fallback={<ResultsSkeleton />}>
+          <ResultsList search={search} />
+        </Suspense>
+      </div>
+    </div>
   );
 }

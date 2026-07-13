@@ -5,8 +5,9 @@ import type { Constraint, TripSearch } from "./types";
  *
  * Params are flat so the URL stays legible and shareable:
  *   origin, destination, start, end, adults, children, cabin,
- *   budget (integer minor units), currency, and minStars when a
- *   min-hotel-rating constraint is present.
+ *   budget (integer minor units), currency, and — when the matching
+ *   constraint is present — minStars (min-hotel-rating) and
+ *   maxStops (max-stops).
  *
  * The `/results` route (TRIP-12) owns the reverse — reading these back into a
  * TripSearch — so this contract is the seam between the two.
@@ -30,6 +31,14 @@ export function tripSearchToSearchParams(search: TripSearch): URLSearchParams {
   );
   if (minRating) {
     params.set("minStars", String(minRating.rating));
+  }
+
+  const maxStops = search.constraints.find(
+    (c): c is Extract<Constraint, { kind: "max-stops" }> =>
+      c.kind === "max-stops",
+  );
+  if (maxStops) {
+    params.set("maxStops", String(maxStops.stops));
   }
 
   return params;

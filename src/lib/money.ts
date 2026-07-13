@@ -35,6 +35,11 @@ export function toMinorUnits(major: number, currency: SupportedCurrency): number
   return Math.round(major * 10 ** MINOR_UNIT_EXPONENT[currency]);
 }
 
+/** The inverse of `toMinorUnits`: 129950 USD → 1299.5, 150000 JPY → 150000. */
+export function toMajorUnits(minor: number, currency: SupportedCurrency): number {
+  return minor / 10 ** MINOR_UNIT_EXPONENT[currency];
+}
+
 /**
  * A `Money` value as a localized currency string, scaled by the currency's own
  * minor unit — so 129900 USD reads as $1,299.00 but 150000 JPY as ¥150,000.

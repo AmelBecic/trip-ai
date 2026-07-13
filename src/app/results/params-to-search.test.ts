@@ -49,6 +49,35 @@ test("maps a positive minStars to a min-hotel-rating constraint, else none", () 
   expect(paramsToSearch({}).constraints).toEqual([]);
 });
 
+test("maps maxStops to a max-stops constraint, treating 0 as a real cap", () => {
+  expect(paramsToSearch({ maxStops: "1" }).constraints).toEqual([
+    { kind: "max-stops", stops: 1 },
+  ]);
+  // 0 means nonstop-only — present, not absent.
+  expect(paramsToSearch({ maxStops: "0" }).constraints).toEqual([
+    { kind: "max-stops", stops: 0 },
+  ]);
+  expect(paramsToSearch({}).constraints).toEqual([]);
+});
+
+test("round-trips both constraints together in a stable order", () => {
+  const search: TripSearch = {
+    origin: "SFO",
+    destination: "KIX",
+    dates: { start: "2026-11-02", end: "2026-11-09" },
+    travelers: { adults: 2, children: 0 },
+    cabin: "economy",
+    budget: { amount: 650000, currency: "USD" },
+    constraints: [
+      { kind: "min-hotel-rating", rating: 4 },
+      { kind: "max-stops", stops: 1 },
+    ],
+  };
+
+  const query = Object.fromEntries(tripSearchToSearchParams(search));
+  expect(paramsToSearch(query)).toEqual(search);
+});
+
 test("normalizes origin and destination to trimmed uppercase", () => {
   const search = paramsToSearch({ origin: " sfo ", destination: " kix " });
   expect(search.origin).toBe("SFO");

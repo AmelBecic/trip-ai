@@ -35,3 +35,14 @@ test("includes minStars only when a min-hotel-rating constraint is present", () 
 
   expect(params.get("minStars")).toBe("4");
 });
+
+test("includes maxStops only when a max-stops constraint is present", () => {
+  expect(tripSearchToSearchParams(base).get("maxStops")).toBeNull();
+
+  const params = tripSearchToSearchParams({
+    ...base,
+    // stops: 0 is a real cap (nonstop only), not an absence.
+    constraints: [{ kind: "max-stops", stops: 0 }],
+  });
+  expect(params.get("maxStops")).toBe("0");
+});
