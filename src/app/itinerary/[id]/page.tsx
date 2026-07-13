@@ -9,9 +9,11 @@ import {
   CardTitle,
 } from "@/components/ui";
 import { getItinerary } from "@/lib/data";
+import { minHotelRating } from "@/lib/hotel";
 import { formatMoney } from "@/lib/money";
 import type { BudgetStatus } from "@/lib/types";
 import { FlightList } from "./flight-list";
+import { HotelList } from "./hotel-list";
 
 export const metadata: Metadata = {
   title: "Itinerary",
@@ -72,6 +74,11 @@ export default async function ItineraryDetail({
       </Card>
 
       <FlightList flights={itinerary.flights} />
+
+      <HotelList
+        hotels={itinerary.hotels}
+        minRating={minHotelRating(itinerary.search.constraints)}
+      />
     </section>
   );
 }
