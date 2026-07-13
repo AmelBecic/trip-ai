@@ -32,7 +32,7 @@ export function HotelCard({
             <span
               role="img"
               className="tabular-nums text-foreground"
-              aria-label={`${hotel.rating} of 5 stars`}
+              aria-label={`${filled} of 5 stars`}
             >
               <span aria-hidden>
                 {"★".repeat(filled)}

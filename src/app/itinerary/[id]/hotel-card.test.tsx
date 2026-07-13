@@ -30,6 +30,14 @@ test("shows name, location, star rating, and nightly + total price", () => {
   expect(screen.getByText("$570.00 total")).not.toBeNull();
 });
 
+test("announces the rounded, clamped star count so label matches the glyphs", () => {
+  render(<HotelCard hotel={hotel({ rating: 3.5 })} />);
+
+  // 3.5 rounds to 4 filled stars; the label must not announce the raw rating.
+  expect(screen.getByLabelText("4 of 5 stars")).not.toBeNull();
+  expect(screen.queryByLabelText("3.5 of 5 stars")).toBeNull();
+});
+
 test("flags a stay below the min-star requirement", () => {
   render(<HotelCard hotel={hotel({ rating: 3 })} minRating={4} />);
 
