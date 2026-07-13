@@ -6,6 +6,7 @@ import { minHotelRating } from "@/lib/hotel";
 import { BudgetBar } from "./budget-bar";
 import { FlightList } from "./flight-list";
 import { HotelList } from "./hotel-list";
+import { Timeline } from "./timeline";
 
 export const metadata: Metadata = {
   title: "Itinerary",
@@ -13,8 +14,8 @@ export const metadata: Metadata = {
 
 /**
  * Itinerary detail — the destination of the results overview's select action.
- * Resolves the trip by id and lays out its summary, budget bar, flights, and
- * hotels. TRIP-16 adds the day-by-day timeline below.
+ * Resolves the trip by id and lays out its summary, budget bar, flights,
+ * hotels, and the day-by-day timeline.
  */
 export default async function ItineraryDetail({
   params,
@@ -47,6 +48,8 @@ export default async function ItineraryDetail({
         hotels={itinerary.hotels}
         minRating={minHotelRating(itinerary.search.constraints)}
       />
+
+      <Timeline days={itinerary.days} />
     </section>
   );
 }
