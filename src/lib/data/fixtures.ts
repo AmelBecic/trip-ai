@@ -169,14 +169,70 @@ const KYOTO: ItineraryFixture[] = [
     ],
     days: [
       {
+        date: "2026-11-03",
+        title: "Arrival & Gion",
+        activities: [
+          {
+            id: "kix-classic-d1-a1",
+            name: "Evening stroll through Gion",
+            start: "2026-11-03T19:30:00+09:00",
+            location: "Gion",
+          },
+        ],
+      },
+      {
+        date: "2026-11-04",
+        title: "Southern Higashiyama",
+        activities: [
+          {
+            id: "kix-classic-d2-a1",
+            name: "Fushimi Inari before the crowds",
+            start: "2026-11-04T07:30:00+09:00",
+            location: "Fushimi",
+          },
+          {
+            id: "kix-classic-d2-a2",
+            name: "Kiyomizu-dera & Sannenzaka",
+            start: "2026-11-04T11:00:00+09:00",
+            location: "Higashiyama",
+            cost: usd(4),
+          },
+          {
+            id: "kix-classic-d2-a3",
+            name: "Kaiseki dinner in Pontocho",
+            start: "2026-11-04T19:00:00+09:00",
+            location: "Pontocho",
+            cost: usd(160),
+          },
+        ],
+      },
+      {
         date: "2026-11-05",
         title: "Arashiyama",
         activities: [
           {
             id: "kix-classic-d3-a1",
             name: "Bamboo grove & Tenryu-ji",
+            start: "2026-11-05T09:00:00+09:00",
             location: "Arashiyama",
             cost: usd(8),
+          },
+          {
+            id: "kix-classic-d3-a2",
+            name: "Okochi Sanso villa & gardens",
+            location: "Arashiyama",
+            cost: usd(10),
+          },
+        ],
+      },
+      {
+        date: "2026-11-06",
+        title: "Ryokan night in the hills",
+        activities: [
+          {
+            id: "kix-classic-d4-a1",
+            name: "Onsen soak & ryokan kaiseki",
+            location: "Kurama",
           },
         ],
       },
