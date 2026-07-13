@@ -38,6 +38,13 @@ test("meetsMinRating compares rating against the floor inclusively", () => {
   expect(meetsMinRating(hotel(3), 4)).toBe(false);
 });
 
+test("meetsMinRating uses the same rounding as the displayed stars", () => {
+  // 3.5 rounds up to 4 filled stars, so it must read as meeting a 4★ floor —
+  // otherwise the card would show 4 stars yet flag the stay as below 4.
+  expect(meetsMinRating(hotel(3.5), 4)).toBe(true);
+  expect(meetsMinRating(hotel(3.4), 4)).toBe(false);
+});
+
 test("starCounts rounds and clamps to a 0–5 scale", () => {
   expect(starCounts(4)).toEqual({ filled: 4, empty: 1 });
   expect(starCounts(0)).toEqual({ filled: 0, empty: 5 });

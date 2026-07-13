@@ -49,3 +49,11 @@ test("does not flag a stay that meets the requirement", () => {
 
   expect(screen.queryByText(/minimum/)).toBeNull();
 });
+
+test("keeps the below-minimum flag consistent with the rounded stars shown", () => {
+  render(<HotelCard hotel={hotel({ rating: 3.5 })} minRating={4} />);
+
+  // 3.5 rounds to 4 filled stars, so the card must not also flag it below 4.
+  expect(screen.getByLabelText("4 of 5 stars")).not.toBeNull();
+  expect(screen.queryByText(/minimum/)).toBeNull();
+});

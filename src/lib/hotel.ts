@@ -22,13 +22,18 @@ export function minHotelRating(constraints: Constraint[]): number | null {
   return min;
 }
 
-/** Whether a hotel clears a minimum star rating. A `null` minimum is always met. */
-export function meetsMinRating(hotel: Hotel, min: number | null): boolean {
-  return min === null || hotel.rating >= min;
-}
-
 /** Filled and empty star counts for a 0–5 rating, rounded and clamped to the scale. */
 export function starCounts(rating: number): { filled: number; empty: number } {
   const filled = Math.max(0, Math.min(5, Math.round(rating)));
   return { filled, empty: 5 - filled };
+}
+
+/**
+ * Whether a hotel clears a minimum star rating. A `null` minimum is always met.
+ * Compares the *displayed* star count (`starCounts`), not the raw rating, so the
+ * "below minimum" flag can never contradict the glyphs the card draws — a stay
+ * shown as 4 stars is treated as 4 stars here too.
+ */
+export function meetsMinRating(hotel: Hotel, min: number | null): boolean {
+  return min === null || starCounts(hotel.rating).filled >= min;
 }
