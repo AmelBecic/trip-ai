@@ -1,17 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  Badge,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui";
 import { getItinerary } from "@/lib/data";
 import { minHotelRating } from "@/lib/hotel";
-import { formatMoney } from "@/lib/money";
-import type { BudgetStatus } from "@/lib/types";
+import { BudgetBar } from "./budget-bar";
 import { FlightList } from "./flight-list";
 import { HotelList } from "./hotel-list";
 
@@ -19,17 +11,10 @@ export const metadata: Metadata = {
   title: "Itinerary",
 };
 
-const STATUS_LABEL: Record<BudgetStatus, string> = {
-  under: "Under budget",
-  near: "Near budget",
-  over: "Over budget",
-};
-
 /**
  * Itinerary detail — the destination of the results overview's select action.
- * Intentionally a thin shell for now: it resolves the trip by id and shows its
- * summary and budget verdict. TRIP-13–16 build the real body here (flight and
- * hotel cards, the budget breakdown bar, and the day-by-day timeline).
+ * Resolves the trip by id and lays out its summary, budget bar, flights, and
+ * hotels. TRIP-16 adds the day-by-day timeline below.
  */
 export default async function ItineraryDetail({
   params,
@@ -39,8 +24,6 @@ export default async function ItineraryDetail({
   const { id } = await params;
   const itinerary = await getItinerary(id);
   if (!itinerary) notFound();
-
-  const { budget } = itinerary;
 
   return (
     <section className="flex flex-col gap-6">
@@ -56,22 +39,7 @@ export default async function ItineraryDetail({
         </h1>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-4">
-            <CardTitle>Budget</CardTitle>
-            <Badge variant={budget.status}>{STATUS_LABEL[budget.status]}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="text-2xl font-semibold text-foreground">
-            {formatMoney(budget.total)}
-          </span>
-          <span className="text-sm text-muted-foreground">
-            of {formatMoney(budget.cap)} budget
-          </span>
-        </CardContent>
-      </Card>
+      <BudgetBar budget={itinerary.budget} />
 
       <FlightList flights={itinerary.flights} />
 
