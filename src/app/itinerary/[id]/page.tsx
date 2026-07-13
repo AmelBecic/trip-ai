@@ -11,6 +11,7 @@ import {
 import { getItinerary } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import type { BudgetStatus } from "@/lib/types";
+import { FlightList } from "./flight-list";
 
 export const metadata: Metadata = {
   title: "Itinerary",
@@ -69,6 +70,8 @@ export default async function ItineraryDetail({
           </span>
         </CardContent>
       </Card>
+
+      <FlightList flights={itinerary.flights} />
     </section>
   );
 }
