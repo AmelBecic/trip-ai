@@ -20,6 +20,16 @@ test("renders the resolved itinerary's summary and budget verdict", async () => 
   expect(screen.getByText("Under budget")).not.toBeNull();
 });
 
+test("lists the itinerary's flights", async () => {
+  render(
+    await ItineraryDetail({ params: Promise.resolve({ id: "kix-lean" }) }),
+  );
+
+  expect(screen.getByRole("heading", { name: "Flights" })).not.toBeNull();
+  // kix-lean flies SFO→KIX on ZipAir.
+  expect(screen.getByText("ZipAir")).not.toBeNull();
+});
+
 test("calls notFound for an unknown id", async () => {
   // notFound() throws a NEXT_HTTP_ERROR_FALLBACK Next intercepts to render 404.
   await expect(
