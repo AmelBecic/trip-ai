@@ -1,4 +1,10 @@
-import { Card, CardContent, CardHeader, Skeleton } from "@/components/ui";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  Skeleton,
+} from "@/components/ui";
 
 /*
  * The results screen's loading state. It pre-draws the real layout — a heading,
@@ -11,18 +17,27 @@ import { Card, CardContent, CardHeader, Skeleton } from "@/components/ui";
  * "Loading trip results" rather than a stream of anonymous placeholders.
  */
 
-/** A stand-in for one itinerary card, matching ./page.tsx's card shape. */
+/** A stand-in for one itinerary card, matching ./page.tsx's card shape:
+ *  title + description beside a status pill, a cost line, then a select action. */
 function ItinerarySkeleton() {
   return (
     <Card>
       <CardHeader>
-        <Skeleton className="h-6 w-2/3" />
-        <Skeleton className="h-4 w-1/2" />
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <Skeleton className="h-6 w-64 max-w-full" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-5 w-24 rounded-full" />
+        </div>
       </CardHeader>
-      <CardContent className="flex items-center justify-between">
-        <Skeleton className="h-5 w-24" />
-        <Skeleton className="h-5 w-16 rounded-full" />
+      <CardContent className="flex items-baseline gap-2">
+        <Skeleton className="h-8 w-28" />
+        <Skeleton className="h-4 w-32" />
       </CardContent>
+      <CardFooter>
+        <Skeleton className="h-9 w-32 rounded-md" />
+      </CardFooter>
     </Card>
   );
 }

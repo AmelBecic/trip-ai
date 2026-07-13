@@ -1,11 +1,14 @@
 /**
  * Currency helpers for turning user-entered major-unit amounts into the integer
- * minor units the `Money` contract stores (see `@/lib/types`).
+ * minor units the `Money` contract stores (see `@/lib/types`), and back into a
+ * display string.
  *
  * Only the currencies the trip search offers are listed; each maps to its
  * ISO 4217 minor-unit exponent. JPY has no minor unit, so its amount is whole
  * yen — a blind ×100 would overstate a yen budget a hundredfold.
  */
+
+import type { Money } from "@/lib/types";
 
 export const SUPPORTED_CURRENCIES = [
   "USD",
@@ -30,4 +33,20 @@ const MINOR_UNIT_EXPONENT: Record<SupportedCurrency, number> = {
 /** Convert a major-unit amount (e.g. 1299.5 USD) to integer minor units (129950). */
 export function toMinorUnits(major: number, currency: SupportedCurrency): number {
   return Math.round(major * 10 ** MINOR_UNIT_EXPONENT[currency]);
+}
+
+/**
+ * A `Money` value as a localized currency string, scaled by the currency's own
+ * minor unit — so 129900 USD reads as $1,299.00 but 150000 JPY as ¥150,000.
+ * Uses the runtime's default locale. Callers must pass a valid ISO 4217 code;
+ * an unknown one makes `Intl.NumberFormat` throw (see `paramsToSearch`, which
+ * narrows query currencies to `SUPPORTED_CURRENCIES` before they get here).
+ */
+export function formatMoney({ amount, currency }: Money): string {
+  const formatter = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency,
+  });
+  const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
+  return formatter.format(amount / 10 ** digits);
 }
