@@ -67,6 +67,21 @@ test("tolerates malformed storage instead of throwing", () => {
   expect(getSavedTrips().map((t) => t.id)).toEqual(["ok"]);
 });
 
+test("drops entries with valid id/summary but malformed money or status", () => {
+  // The fields the card renders (total/cap/status/days) are missing or wrong,
+  // so these would crash formatMoney / the status Badge if they got through.
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      { id: "partial", summary: "looks fine" }, // missing total/cap/status/days
+      makeTrip({ id: "bad-total", total: undefined as unknown as SavedTrip["total"] }),
+      makeTrip({ id: "bad-status", status: "wildly-off" as unknown as SavedTrip["status"] }),
+      makeTrip({ id: "ok" }),
+    ]),
+  );
+  expect(getSavedTrips().map((t) => t.id)).toEqual(["ok"]);
+});
+
 test("toSavedTrip snapshots the fields the list needs", () => {
   const itinerary = {
     id: "kix-lux",

@@ -48,10 +48,34 @@ function canUseStorage(): boolean {
   return typeof window !== "undefined" && !!window.localStorage;
 }
 
+const BUDGET_STATUSES: readonly BudgetStatus[] = ["under", "near", "over"];
+
+function isMoney(value: unknown): value is Money {
+  if (typeof value !== "object" || value === null) return false;
+  const m = value as Record<string, unknown>;
+  return typeof m.amount === "number" && typeof m.currency === "string";
+}
+
+/**
+ * Every field the saved-trips list renders, checked — not just id/summary.
+ * The card destructures `total`/`cap` through `formatMoney` (which throws on a
+ * missing Money) and indexes `STATUS_LABEL`/`Badge` on `status`, so a partial
+ * object that slipped through would crash the render this filter exists to
+ * prevent.
+ */
 function isSavedTrip(value: unknown): value is SavedTrip {
   if (typeof value !== "object" || value === null) return false;
   const t = value as Record<string, unknown>;
-  return typeof t.id === "string" && typeof t.summary === "string";
+  return (
+    typeof t.id === "string" &&
+    typeof t.summary === "string" &&
+    typeof t.destination === "string" &&
+    isMoney(t.total) &&
+    isMoney(t.cap) &&
+    BUDGET_STATUSES.includes(t.status as BudgetStatus) &&
+    typeof t.days === "number" &&
+    typeof t.savedAt === "string"
+  );
 }
 
 /** The saved trips, newest first. Returns [] on the server or on malformed data. */
