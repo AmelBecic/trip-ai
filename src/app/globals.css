@@ -75,8 +75,10 @@
   --border-strong: light-dark(var(--neutral-300), var(--neutral-700));
   --ring: light-dark(var(--brand-600), var(--brand-400));
 
-  /* Brand accent. */
-  --brand: light-dark(var(--brand-600), var(--brand-400));
+  /* Brand accent. The light step is darkened from brand-600 to a custom value
+   * so white text on bg-brand (buttons, brand badge) clears WCAG AA (4.7:1); it
+   * stays lighter than brand-700 so the `hover:bg-brand-700` step still darkens. */
+  --brand: light-dark(oklch(0.54 0.105 202), var(--brand-400));
   --brand-foreground: light-dark(#ffffff, var(--neutral-950));
 
   /*
@@ -88,7 +90,10 @@
   --budget-under-surface: light-dark(oklch(0.95 0.04 152), oklch(0.28 0.05 152));
   --budget-under-foreground: light-dark(oklch(0.38 0.1 152), oklch(0.88 0.09 152));
 
-  --budget-near: light-dark(oklch(0.68 0.15 75), oklch(0.8 0.15 75));
+  /* Light fill darkened from L0.68 so `text-budget-near` on a neutral surface
+   * (the "near budget" delta) clears WCAG AA (4.8:1); still amber, and only used
+   * elsewhere as a decorative bar segment. Dark stays as-is (already ~9:1). */
+  --budget-near: light-dark(oklch(0.56 0.145 75), oklch(0.8 0.15 75));
   --budget-near-surface: light-dark(oklch(0.96 0.05 75), oklch(0.3 0.06 75));
   --budget-near-foreground: light-dark(oklch(0.44 0.11 60), oklch(0.9 0.09 80));
 
