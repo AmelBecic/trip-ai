@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import { getItinerary } from "@/lib/data";
 import { minHotelRating } from "@/lib/hotel";
 import { buildTimeline } from "@/lib/itinerary";
+import { toSavedTrip } from "@/lib/saved-trips";
 import { BudgetBar } from "./budget-bar";
 import { FlightList } from "./flight-list";
 import { HotelList } from "./hotel-list";
+import { SaveTripButton } from "./save-trip-button";
 import { Timeline } from "./timeline";
 
 export const metadata: Metadata = {
@@ -36,9 +38,12 @@ export default async function ItineraryDetail({
         >
           ← New search
         </Link>
-        <h1 className="text-3xl font-semibold text-foreground">
-          {itinerary.summary}
-        </h1>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <h1 className="text-3xl font-semibold text-foreground">
+            {itinerary.summary}
+          </h1>
+          <SaveTripButton trip={toSavedTrip(itinerary)} />
+        </div>
       </div>
 
       <BudgetBar budget={itinerary.budget} />
