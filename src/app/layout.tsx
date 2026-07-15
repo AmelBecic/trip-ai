@@ -48,7 +48,19 @@ export default function RootLayout({
          * a focusable element; without this, Safari scrolls but leaves focus in
          * the header, so the next Tab returns to the nav the link just skipped.
          */}
-        <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+        {/*
+         * overflow-x-clip is a backstop against a horizontal body scroll on
+         * narrow (360px) screens: components already constrain themselves
+         * (min-w-0 / truncate / flex-wrap), and this guarantees a stray wide
+         * child can never scroll the page sideways. It sits on <main>, not
+         * <body>, so the sticky header keeps working; clip (not hidden) creates
+         * no scroll container and doesn't trap the fixed filters drawer.
+         */}
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex-1 overflow-x-clip focus:outline-none"
+        >
           <Container className="py-8 md:py-12">{children}</Container>
         </main>
         <SiteFooter />
