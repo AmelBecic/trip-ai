@@ -54,7 +54,15 @@ export default function RootLayout({
          * (min-w-0 / truncate / flex-wrap), and this guarantees a stray wide
          * child can never scroll the page sideways. It sits on <main>, not
          * <body>, so the sticky header keeps working; clip (not hidden) creates
-         * no scroll container and doesn't trap the fixed filters drawer.
+         * no scroll container.
+         *
+         * Trade-off: clip also hard-clips anything that intentionally paints
+         * outside <main>'s horizontal box. Nothing under here does today — the
+         * only overlays are the native <select> option list (a browser layer,
+         * not CSS-clipped) and the filters drawer (position: fixed, which this
+         * clip doesn't create a containing block for, so it escapes). Any
+         * future popover / dropdown / tooltip added below MUST portal to <body>
+         * or use position: fixed, or it will be clipped on the horizontal axis.
          */}
         <main
           id="main-content"
