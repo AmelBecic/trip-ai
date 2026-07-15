@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui";
-import { searchTrips } from "@/lib/data";
+import { DataError, searchTrips } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { tripSearchToSearchParams } from "@/lib/search-params";
 import type { BudgetBreakdown, BudgetStatus, TripSearch } from "@/lib/types";
@@ -67,10 +67,21 @@ export async function ResultsList({ search }: { search: TripSearch }) {
   let itineraries: Awaited<ReturnType<typeof searchTrips>>;
   try {
     itineraries = await searchTrips(search);
-  } catch {
-    // Keep the route standing on any data-layer rejection (the seam error path,
-    // or an unsupported search like a mixed-currency cap) and offer a retry.
-    return <ErrorState />;
+  } catch (err) {
+    // Two failure classes land here. A DataError is the seam's transient outage
+    // — a retry can clear it, so offer one and surface its message. Anything
+    // else is deterministic for this search (e.g. a mixed-currency cap the
+    // pricing always rejects): router.refresh() would only reproduce it, so drop
+    // the no-op retry and point the user back to adjusting the search instead.
+    if (err instanceof DataError) {
+      return <ErrorState message={err.message} />;
+    }
+    return (
+      <ErrorState
+        retryable={false}
+        message="We can't price this search — the budget cap uses a different currency than these trips. Adjust your search and try again."
+      />
+    );
   }
 
   if (itineraries.length === 0) {

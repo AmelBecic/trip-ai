@@ -37,3 +37,11 @@ test("offers a route back to the search form", () => {
   const back = screen.getByRole("link", { name: /back to search/i });
   expect(back.getAttribute("href")).toBe("/plan");
 });
+
+test("drops the no-op retry for a non-retryable failure but keeps the way back", () => {
+  render(<ErrorState retryable={false} />);
+  expect(screen.queryByRole("button", { name: /try again/i })).toBeNull();
+  expect(screen.getByRole("link", { name: /back to search/i }).getAttribute("href")).toBe(
+    "/plan",
+  );
+});

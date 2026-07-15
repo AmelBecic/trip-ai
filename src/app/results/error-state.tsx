@@ -5,12 +5,21 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui";
 
 /**
- * The failure state for /results (TRIP-18). Shown when the data layer rejects —
- * the seam's error path, or an unsupported search such as a mixed-currency cap.
- * "Try again" re-runs the route's server components via router.refresh() (the
- * retry the ticket calls for), and there's always a way back to the form.
+ * The failure state for /results (TRIP-18). Shown when the data layer rejects.
+ * A transient seam outage is `retryable`: "Try again" re-runs the route's server
+ * components via router.refresh() (the retry the ticket calls for). A
+ * deterministic failure — an unsupported search such as a mixed-currency cap
+ * that always rejects — passes `retryable={false}`, since a refresh would only
+ * reproduce it; there the copy points back to the form as the forward path.
+ * Either way there's always a way back to the search.
  */
-export function ErrorState({ message }: { message?: string }) {
+export function ErrorState({
+  message,
+  retryable = true,
+}: {
+  message?: string;
+  retryable?: boolean;
+}) {
   const router = useRouter();
   return (
     <section className="flex flex-col gap-6" aria-labelledby="results-error-heading">
@@ -27,7 +36,9 @@ export function ErrorState({ message }: { message?: string }) {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button onClick={() => router.refresh()}>Try again</Button>
+        {retryable ? (
+          <Button onClick={() => router.refresh()}>Try again</Button>
+        ) : null}
         <Link
           href="/plan"
           className="inline-flex items-center justify-center gap-2 rounded-md border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"

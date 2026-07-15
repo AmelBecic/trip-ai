@@ -88,9 +88,24 @@ test("shows the empty state with guidance and a CTA back to search when nothing 
   expect(cta.getAttribute("href")).toBe("/plan");
 });
 
-test("degrades to a retryable error state instead of crashing when the seam throws", async () => {
+test("degrades to a retryable error state instead of crashing when the seam is down", async () => {
+  // A DataError from the seam is a transient outage; a refresh can clear it, so
+  // the error state should offer "Try again".
+  configureData({ shouldFail: true });
+  render(
+    await ResultsList({
+      search: searchFrom({ destination: "KIX", budget: "650000", currency: "USD" }),
+    }),
+  );
+
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/something went wrong/i);
+  expect(screen.getByRole("button", { name: /try again/i })).not.toBeNull();
+});
+
+test("a deterministic failure drops the no-op retry and points back to search", async () => {
   // The fixtures price in USD; a EUR cap makes searchTrips reject on mixed
-  // currencies. The list should catch that and render ErrorState, not blow up.
+  // currencies every time, so router.refresh() could only reproduce it. The list
+  // should render an error without a "Try again", keeping the forward path.
   render(
     await ResultsList({
       search: searchFrom({ destination: "KIX", budget: "600000", currency: "EUR" }),
@@ -98,5 +113,8 @@ test("degrades to a retryable error state instead of crashing when the seam thro
   );
 
   expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/something went wrong/i);
-  expect(screen.getByRole("button", { name: /try again/i })).not.toBeNull();
+  expect(screen.queryByRole("button", { name: /try again/i })).toBeNull();
+  expect(screen.getByRole("link", { name: /back to search/i }).getAttribute("href")).toBe(
+    "/plan",
+  );
 });
