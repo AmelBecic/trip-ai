@@ -316,7 +316,7 @@ export function TripSearchForm() {
         </Field>
       </div>
 
-      <Button type="submit" className="self-start">
+      <Button type="submit" className="w-full sm:w-auto sm:self-start">
         Search trips
       </Button>
     </form>

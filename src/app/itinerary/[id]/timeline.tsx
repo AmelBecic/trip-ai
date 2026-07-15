@@ -50,7 +50,12 @@ export function Timeline({ days }: { days: TimelineDay[] }) {
                 </div>
 
                 <div
-                  className={cn("flex flex-1 flex-col gap-2", !last && "pb-6")}
+                  className={cn(
+                    // min-w-0 lets the column shrink below its content so long
+                    // event strings wrap instead of forcing horizontal scroll.
+                    "flex min-w-0 flex-1 flex-col gap-2 break-words",
+                    !last && "pb-6",
+                  )}
                 >
                   <div className="flex flex-col gap-0.5">
                     <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
