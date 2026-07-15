@@ -14,6 +14,8 @@ import { searchTrips } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { tripSearchToSearchParams } from "@/lib/search-params";
 import type { BudgetBreakdown, BudgetStatus, TripSearch } from "@/lib/types";
+import { EmptyState } from "./empty-state";
+import { ErrorState } from "./error-state";
 import { FiltersSidebar } from "./filters-sidebar";
 import { paramsToSearch, type SearchParams } from "./params-to-search";
 import { ResultsSkeleton } from "./results-skeleton";
@@ -66,16 +68,13 @@ export async function ResultsList({ search }: { search: TripSearch }) {
   try {
     itineraries = await searchTrips(search);
   } catch {
-    // A cap in a currency the fixtures don't price in makes searchTrips reject on
-    // mixed currencies. Proper error UI is TRIP-18's — keep the route standing.
-    return (
-      <section className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold text-foreground">Results</h1>
-        <p className="text-muted-foreground">
-          We couldn&apos;t load trips for that search. Please try again.
-        </p>
-      </section>
-    );
+    // Keep the route standing on any data-layer rejection (the seam error path,
+    // or an unsupported search like a mixed-currency cap) and offer a retry.
+    return <ErrorState />;
+  }
+
+  if (itineraries.length === 0) {
+    return <EmptyState destination={search.destination} />;
   }
 
   const heading = search.destination
@@ -87,17 +86,14 @@ export async function ResultsList({ search }: { search: TripSearch }) {
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold text-foreground">{heading}</h1>
         <p className="text-muted-foreground">
-          {itineraries.length > 0
-            ? `${itineraries.length} ${
-                itineraries.length === 1 ? "itinerary" : "itineraries"
-              } priced against your ${formatMoney(search.budget)} budget.`
-            : "No itineraries matched — try a different destination or loosening your filters."}
+          {`${itineraries.length} ${
+            itineraries.length === 1 ? "itinerary" : "itineraries"
+          } priced against your ${formatMoney(search.budget)} budget.`}
         </p>
       </div>
 
-      {itineraries.length > 0 ? (
-        <ul className="grid gap-4">
-          {itineraries.map((itinerary) => {
+      <ul className="grid gap-4">
+        {itineraries.map((itinerary) => {
             const { budget } = itinerary;
             const delta = budgetDelta(budget);
             return (
@@ -147,8 +143,7 @@ export async function ResultsList({ search }: { search: TripSearch }) {
               </li>
             );
           })}
-        </ul>
-      ) : null}
+      </ul>
     </section>
   );
 }
