@@ -173,6 +173,72 @@ test("a second 401 after the refresh throws rather than spinning", async () => {
   expect(h.tokenCalls()).toBe(2);
 });
 
+test("a rate-limited token endpoint retries too, not just searches", async () => {
+  // Amadeus throttles the account, not the route — a cold-start token POST can
+  // be limited exactly as a search can, and it used to fall through to a
+  // generic error with no retry at all.
+  const h = harness({
+    token: [() => json({}, { status: 429 }), token()],
+  });
+
+  await expect(h.client.getAccessToken()).resolves.toBe("tok");
+  expect(h.slept).toEqual([500]);
+});
+
+test("a persistently rate-limited token endpoint gives a typed error", async () => {
+  const h = harness({ token: [() => json({}, { status: 429 })] });
+
+  const err = await h.client.getAccessToken().catch((e: unknown) => e);
+
+  expect(err).toBeInstanceOf(AmadeusRateLimitError);
+  expect((err as AmadeusRateLimitError).message).toContain("token endpoint");
+});
+
+test("a hung request is bounded and stays inside the error contract", async () => {
+  // Platform fetch has no default timeout; an AbortError escaping raw would be
+  // exactly the "raw fetch failure" the ticket rules out.
+  const timeout = Object.assign(new Error("The operation timed out."), {
+    name: "TimeoutError",
+  });
+  const h = harness({
+    token: [
+      () => {
+        throw timeout;
+      },
+    ],
+  });
+
+  const err = await h.client.getAccessToken().catch((e: unknown) => e);
+
+  expect(err).toBeInstanceOf(AmadeusError);
+  expect((err as AmadeusError).message).toContain("did not respond within");
+  expect((err as AmadeusError).cause).toBe(timeout);
+});
+
+test("a transport failure is wrapped rather than leaking raw", async () => {
+  const boom = new TypeError("fetch failed");
+  const h = harness({
+    token: [
+      () => {
+        throw boom;
+      },
+    ],
+  });
+
+  const err = await h.client.getAccessToken().catch((e: unknown) => e);
+
+  expect(err).toBeInstanceOf(AmadeusError);
+  expect((err as AmadeusError).cause).toBe(boom);
+});
+
+test("every request carries an abort signal", async () => {
+  const h = harness();
+
+  await h.client.searchFlightOffers(FLIGHTS);
+
+  expect(h.searchCalls()[0].init?.signal).toBeInstanceOf(AbortSignal);
+});
+
 test("bad credentials surface as an auth error, not a generic failure", async () => {
   const h = harness({
     token: [() => json({ errors: [{ title: "invalid_client" }] }, { status: 401 })],

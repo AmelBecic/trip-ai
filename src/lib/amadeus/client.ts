@@ -36,6 +36,17 @@ const MAX_RATE_LIMIT_RETRIES = 3;
 const BASE_BACKOFF_MS = 500;
 const MAX_BACKOFF_MS = 8_000;
 
+/**
+ * Platform `fetch` has no default timeout, so without this a wedged connection
+ * blocks the caller forever — and in TRIP-30's fan-out one hung request would
+ * stall a whole plan with nothing to report.
+ *
+ * 10s is a defensible guess, not a measured one: real Amadeus latencies are
+ * unknown until the test tier has been exercised (the "verify early" gap on
+ * TRIP-27). Re-tune once we have observed timings.
+ */
+const DEFAULT_TIMEOUT_MS = 10_000;
+
 /** Any Amadeus transport failure. Carries the HTTP status when there was one. */
 export class AmadeusError extends Error {
   readonly status?: number;
@@ -74,6 +85,8 @@ export interface AmadeusClientConfig {
   sleep?: (ms: number) => Promise<void>;
   /** Injected in tests to drive token expiry without waiting. */
   now?: () => number;
+  /** Per-request ceiling. Defaults to `DEFAULT_TIMEOUT_MS`. */
+  timeoutMs?: number;
 }
 
 export interface AmadeusClient {
@@ -86,8 +99,9 @@ export interface AmadeusClient {
 /**
  * How long to wait before retrying a 429. Amadeus tells us via `Retry-After`
  * when it feels like it, and its own number beats our guess; otherwise back off
- * exponentially. Capped either way so a wedged upstream can't stall a request
- * indefinitely.
+ * exponentially. Capped either way, so a `Retry-After: 3600` can't park a
+ * request for an hour. This bounds the *waiting* only — bounding the request
+ * itself is `send`'s job.
  */
 function backoffMs(attempt: number, retryAfter: string | null): number {
   const headerSeconds = retryAfter === null ? Number.NaN : Number(retryAfter);
@@ -124,6 +138,7 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
   const sleep =
     config.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const now = config.now ?? Date.now;
+  const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   let cached: { value: string; expiresAt: number } | null = null;
 
@@ -150,16 +165,66 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
     }
   }
 
+  /**
+   * One HTTP call, bounded by `timeoutMs`, with transport-level failures folded
+   * into the `AmadeusError` contract. A bare abort or socket error escaping this
+   * module is the "raw fetch failure" the ticket rules out.
+   */
+  async function send(url: string, init: RequestInit): Promise<Response> {
+    try {
+      return await doFetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    } catch (cause) {
+      const aborted = cause instanceof Error && cause.name === "TimeoutError";
+      throw new AmadeusError(
+        aborted
+          ? `Amadeus did not respond within ${timeoutMs}ms.`
+          : `Amadeus request failed before a response: ${String(cause)}`,
+        { cause },
+      );
+    }
+  }
+
+  /**
+   * Retry 429s with capped backoff, then give up with a typed error. Shared by
+   * the token endpoint and the searches: Amadeus throttles the *account*, not
+   * the route, so a cold-start token POST can be limited exactly as a search
+   * can. Returns the first non-429 response.
+   */
+  async function withRateLimitRetry(
+    what: string,
+    attempt: () => Promise<Response>,
+  ): Promise<Response> {
+    let attempts = 0;
+    for (;;) {
+      const res = await attempt();
+      if (res.status !== 429) return res;
+
+      if (attempts >= MAX_RATE_LIMIT_RETRIES) {
+        throw new AmadeusRateLimitError(
+          `Amadeus rate limit still hit after ${attempts} retries on ${what}: ${await describe(res)}`,
+          { status: 429 },
+        );
+      }
+      const wait = backoffMs(attempts, res.headers.get("retry-after"));
+      // Discarded response — release the body rather than leaving it for the GC.
+      await res.body?.cancel();
+      await sleep(wait);
+      attempts += 1;
+    }
+  }
+
   async function fetchToken(): Promise<string> {
-    const res = await doFetch(`${baseUrl}/v1/security/oauth2/token`, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
+    const res = await withRateLimitRetry("the token endpoint", () =>
+      send(`${baseUrl}/v1/security/oauth2/token`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "client_credentials",
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+        }),
       }),
-    });
+    );
 
     // Amadeus answers bad credentials with 401, and a malformed grant with 400.
     // Both mean "your keys are wrong" — a retry with the same keys is pointless.
@@ -210,14 +275,15 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
   }
 
   async function request(path: string, search: URLSearchParams): Promise<unknown> {
-    let rateLimitAttempts = 0;
     let refreshed = false;
 
     for (;;) {
       const token = await getAccessToken();
-      const res = await doFetch(`${baseUrl}${path}?${search.toString()}`, {
-        headers: { authorization: `Bearer ${token}` },
-      });
+      const res = await withRateLimitRetry(path, () =>
+        send(`${baseUrl}${path}?${search.toString()}`, {
+          headers: { authorization: `Bearer ${token}` },
+        }),
+      );
 
       if (res.status === 401) {
         // The token was refused despite looking fresh — it can be revoked, or
@@ -235,20 +301,6 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
         // This response is being discarded — release the body so the connection
         // isn't held open waiting for a reader that never comes.
         await res.body?.cancel();
-        continue;
-      }
-
-      if (res.status === 429) {
-        if (rateLimitAttempts >= MAX_RATE_LIMIT_RETRIES) {
-          throw new AmadeusRateLimitError(
-            `Amadeus rate limit still hit after ${rateLimitAttempts} retries: ${await describe(res)}`,
-            { status: 429 },
-          );
-        }
-        const wait = backoffMs(rateLimitAttempts, res.headers.get("retry-after"));
-        await res.body?.cancel();
-        await sleep(wait);
-        rateLimitAttempts += 1;
         continue;
       }
 
