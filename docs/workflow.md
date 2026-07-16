@@ -14,13 +14,13 @@ Scaffolded with dev-kit. This is how work flows through this repo.
    ├─▶ open PR (title includes TICKET-123)
    │
    ├─▶ AI code reviewer runs on the PR   →  code quality + requirement check
-   │       (~/Desktop/career-improvement/ai-code-reviewer)
+   │       (separate local tool, installed outside this repo)
    │
    ├─▶ CI runs the same gates + dependency audit
    │
    ├─▶ merge  →  Mergiraf resolves structural conflicts automatically
    │
-   └─▶ metrics captured  →  ~/dev-kit/cockpit.sh   (tokens · cost · velocity)
+   └─▶ metrics captured  →  dev-kit cockpit.sh     (tokens · cost · velocity)
 ```
 
 ## Commands
@@ -28,7 +28,7 @@ Scaffolded with dev-kit. This is how work flows through this repo.
 |--------------------|--------------------------------------|
 | Secret scan now    | `npm run secrets` / `gitleaks detect`|
 | Lint / types / tests | `npm run lint` · `npm run typecheck` · `npm run test` |
-| Metrics dashboard  | `~/dev-kit/cockpit.sh [today\|week\|month]` |
+| Metrics dashboard  | `cockpit.sh [today\|week\|month]` (dev-kit, installed globally) |
 | Live usage window  | `npx ccusage blocks`                 |
 
 ## Notes
