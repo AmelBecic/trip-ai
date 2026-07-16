@@ -6,6 +6,10 @@ Each ticket = one feature branch → PR → ai-code-reviewer → merge.
 
 Acceptance criteria are written so the reviewer can check requirement fulfillment against them.
 
+This document covers the epic'd feature work. Standalone repo chores and bugs — TRIP-22 … TRIP-25
+(backlog doc, CI gates, local paths, PR-title check) and TRIP-35 — live in Jira only, which is why
+the keys below jump from TRIP-21 to TRIP-26.
+
 ---
 
 # Sprint 1 — Frontend Foundation & Screens (mock data) ✅
