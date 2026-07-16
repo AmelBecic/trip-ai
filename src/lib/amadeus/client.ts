@@ -166,6 +166,23 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
   }
 
   /**
+   * A 2xx is not a promise of JSON. A truncated body, a proxy's HTML error page,
+   * an interstitial — each rejects `res.json()` with a bare SyntaxError, which is
+   * the same "raw fetch failure" this module exists to absorb. `describe` guards
+   * the error path; this guards the success path.
+   */
+  async function parseJson(res: Response, what: string): Promise<unknown> {
+    try {
+      return await res.json();
+    } catch (cause) {
+      throw new AmadeusError(
+        `Amadeus returned an unparseable body for ${what} (${res.status}).`,
+        { status: res.status, cause },
+      );
+    }
+  }
+
+  /**
    * One HTTP call, bounded by `timeoutMs`, with transport-level failures folded
    * into the `AmadeusError` contract. A bare abort or socket error escaping this
    * module is the "raw fetch failure" the ticket rules out.
@@ -241,7 +258,7 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
       );
     }
 
-    const body = (await res.json()) as AmadeusTokenResponse;
+    const body = (await parseJson(res, "the token endpoint")) as AmadeusTokenResponse;
 
     // The shape is modelled from Amadeus's published schema, not from observed
     // traffic, so check the two fields we actually depend on. A missing
@@ -297,7 +314,12 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
           );
         }
         refreshed = true;
-        cached = null;
+        // Drop only the token this attempt actually used. Under the parallel
+        // fan-out this client is built for, a concurrent caller may already have
+        // replaced it with a good one — clearing blindly would throw that away
+        // and force yet another POST, cascading one expiry into N of them and
+        // defeating the whole point of the single-flight fetch above.
+        if (cached?.value === token) cached = null;
         // This response is being discarded — release the body so the connection
         // isn't held open waiting for a reader that never comes.
         await res.body?.cancel();
@@ -311,7 +333,7 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
         );
       }
 
-      return await res.json();
+      return await parseJson(res, path);
     }
   }
 

@@ -9,9 +9,10 @@ import type { FlightOffersParams, HotelOffersParams } from "./types";
 
 /**
  * Every reply is a factory, not a `Response` — a body can only be read once, so
- * a shared instance would break the moment two calls hit the same reply.
+ * a shared instance would break the moment two calls hit the same reply. A reply
+ * may be async when a test needs to control *when* a response lands.
  */
-type Reply = () => Response;
+type Reply = () => Response | Promise<Response>;
 
 function json(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -21,8 +22,17 @@ function json(body: unknown, init: ResponseInit = {}): Response {
   });
 }
 
-const token = (expiresIn = 1799): Reply => () =>
-  json({ access_token: "tok", expires_in: expiresIn, token_type: "Bearer" });
+const token = (expiresIn = 1799, value = "tok"): Reply => () =>
+  json({ access_token: value, expires_in: expiresIn, token_type: "Bearer" });
+
+/** A reply that lands later, for ordering two concurrent callers against each other. */
+const after = (ms: number, reply: Reply): Reply => async () => {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+  return reply();
+};
+
+const staleToken = (): Response =>
+  json({ errors: [{ title: "Invalid access token" }] }, { status: 401 });
 
 const FLIGHTS: FlightOffersParams = {
   originLocationCode: "SFO",
@@ -65,11 +75,11 @@ function harness(opts: { token?: Reply[]; search?: Reply[] } = {}) {
     if (url.includes(TOKEN_PATH)) {
       const reply = next(tokenReplies, ti);
       ti += 1;
-      return reply();
+      return await reply();
     }
     const reply = next(searchReplies, si);
     si += 1;
-    return reply();
+    return await reply();
   }) as typeof fetch;
 
   const client = createAmadeusClient({
@@ -161,10 +171,51 @@ test("a 401 triggers exactly one refresh-and-retry, then succeeds", async () => 
   expect(h.tokenCalls()).toBe(2);
 });
 
-test("a second 401 after the refresh throws rather than spinning", async () => {
+test("parallel callers hitting the same stale token refresh it once, not once each", async () => {
   const h = harness({
-    search: [() => json({ errors: [{ title: "Invalid access token" }] }, { status: 401 })],
+    token: [token(1799, "t1"), token(1799, "t2")],
+    search: [
+      // A 401s immediately and refreshes to t2. B's 401 lands afterwards, still
+      // carrying t1 — it must notice t2 already replaced it rather than nulling
+      // the cache and forcing a third POST.
+      staleToken,
+      after(20, staleToken),
+      () => json({ data: [] }),
+    ],
   });
+
+  await Promise.all([
+    h.client.searchFlightOffers(FLIGHTS),
+    h.client.searchHotelOffers(HOTELS),
+  ]);
+
+  expect(h.tokenCalls()).toBe(2);
+});
+
+test("a 200 that isn't JSON stays inside the error contract", async () => {
+  // A 2xx is not a promise of JSON — a proxy interstitial would otherwise
+  // reject with a bare SyntaxError.
+  const h = harness({
+    search: [() => new Response("<html>hello</html>", { status: 200 })],
+  });
+
+  const err = await h.client.searchFlightOffers(FLIGHTS).catch((e: unknown) => e);
+
+  expect(err).toBeInstanceOf(AmadeusError);
+  expect((err as AmadeusError).message).toContain("unparseable body");
+});
+
+test("a token endpoint returning non-JSON stays inside the error contract", async () => {
+  const h = harness({ token: [() => new Response("<html>oops</html>", { status: 200 })] });
+
+  const err = await h.client.getAccessToken().catch((e: unknown) => e);
+
+  expect(err).toBeInstanceOf(AmadeusError);
+  expect((err as AmadeusError).message).toContain("unparseable body");
+});
+
+test("a second 401 after the refresh throws rather than spinning", async () => {
+  const h = harness({ search: [staleToken] });
 
   await expect(h.client.searchFlightOffers(FLIGHTS)).rejects.toBeInstanceOf(
     AmadeusAuthError,
