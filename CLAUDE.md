@@ -1,6 +1,6 @@
 # Project house rules
 
-> Scaffolded with [dev-kit](~/dev-kit). These rules apply to this repo.
+> Scaffolded with dev-kit. These rules apply to this repo.
 
 ## Workflow (non-negotiable)
 - **Never commit directly to `main`.** Every change: feature branch → PR → review → merge.
