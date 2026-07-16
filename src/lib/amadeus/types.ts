@@ -74,10 +74,6 @@ export interface AmadeusFlightOffer {
   travelerPricings?: AmadeusTravelerPricing[];
 }
 
-export interface AmadeusFlightOffersResponse {
-  data?: AmadeusFlightOffer[];
-}
-
 export interface AmadeusHotelAddress {
   lines?: string[];
   cityName?: string;
@@ -103,10 +99,6 @@ export interface AmadeusHotelOffer {
 export interface AmadeusHotelOfferEntry {
   hotel: AmadeusHotelInfo;
   offers: AmadeusHotelOffer[];
-}
-
-export interface AmadeusHotelOffersResponse {
-  data?: AmadeusHotelOfferEntry[];
 }
 
 /** Amadeus's error envelope — a useful title/detail lives in here on a non-2xx. */

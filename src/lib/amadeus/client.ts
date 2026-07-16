@@ -13,9 +13,7 @@
 import type {
   AmadeusErrorResponse,
   AmadeusFlightOffer,
-  AmadeusFlightOffersResponse,
   AmadeusHotelOfferEntry,
-  AmadeusHotelOffersResponse,
   AmadeusTokenResponse,
   FlightOffersParams,
   HotelOffersParams,
@@ -99,6 +97,27 @@ function backoffMs(attempt: number, retryAfter: string | null): number {
   return Math.min(BASE_BACKOFF_MS * 2 ** attempt, MAX_BACKOFF_MS);
 }
 
+/**
+ * Amadeus wraps every collection in `{ data: [...] }`. A missing `data` means
+ * no results — a legitimate answer. Anything else is a protocol violation, and
+ * naming it here keeps it inside the `AmadeusError` contract instead of letting
+ * TRIP-28's mapper trip over it several frames from the cause.
+ *
+ * Only the envelope is checked. The shape of each element stays a modelled
+ * assumption (see `types.ts`) — validating that would be TRIP-28's job.
+ */
+function unwrapData<T>(body: unknown, path: string): T[] {
+  if (typeof body !== "object" || body === null) {
+    throw new AmadeusError(`Amadeus returned a non-object body for ${path}.`);
+  }
+  const data = (body as { data?: unknown }).data;
+  if (data === undefined || data === null) return [];
+  if (!Array.isArray(data)) {
+    throw new AmadeusError(`Amadeus returned a non-array \`data\` for ${path}.`);
+  }
+  return data as T[];
+}
+
 export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient {
   const baseUrl = config.baseUrl ?? TEST_BASE_URL;
   const doFetch = config.fetch ?? globalThis.fetch;
@@ -107,6 +126,15 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
   const now = config.now ?? Date.now;
 
   let cached: { value: string; expiresAt: number } | null = null;
+
+  /**
+   * The in-flight token request, shared by everyone who arrives while it runs.
+   * Caching only the *value* isn't enough: a fan-out on a cold cache — the agent
+   * searching flights and hotels in parallel, say — would fire one token POST
+   * per caller and could burn the free tier's rate limit before the first real
+   * search goes out.
+   */
+  let inFlight: Promise<string> | null = null;
 
   /**
    * Amadeus puts a readable title/detail in the error body. Read it when it's
@@ -149,6 +177,22 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
     }
 
     const body = (await res.json()) as AmadeusTokenResponse;
+
+    // The shape is modelled from Amadeus's published schema, not from observed
+    // traffic, so check the two fields we actually depend on. A missing
+    // `expires_in` is the dangerous one: `expiresAt` becomes NaN, every
+    // `now() < NaN` check is false, and the client silently re-fetches a token
+    // on every single request — burning the rate limit with nothing to trace.
+    if (
+      typeof body.access_token !== "string" ||
+      !Number.isFinite(body.expires_in)
+    ) {
+      throw new AmadeusError(
+        "Amadeus returned a token response without a usable access_token/expires_in.",
+        { status: res.status },
+      );
+    }
+
     cached = { value: body.access_token, expiresAt: now() + body.expires_in * 1000 };
     return body.access_token;
   }
@@ -157,10 +201,15 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
     if (cached !== null && now() < cached.expiresAt - EXPIRY_SKEW_MS) {
       return cached.value;
     }
-    return fetchToken();
+    // Clear the slot once it settles rather than holding the promise forever —
+    // a failed token request must not poison every later caller.
+    inFlight ??= fetchToken().finally(() => {
+      inFlight = null;
+    });
+    return inFlight;
   }
 
-  async function request<T>(path: string, search: URLSearchParams): Promise<T> {
+  async function request(path: string, search: URLSearchParams): Promise<unknown> {
     let rateLimitAttempts = 0;
     let refreshed = false;
 
@@ -183,6 +232,9 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
         }
         refreshed = true;
         cached = null;
+        // This response is being discarded — release the body so the connection
+        // isn't held open waiting for a reader that never comes.
+        await res.body?.cancel();
         continue;
       }
 
@@ -193,7 +245,9 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
             { status: 429 },
           );
         }
-        await sleep(backoffMs(rateLimitAttempts, res.headers.get("retry-after")));
+        const wait = backoffMs(rateLimitAttempts, res.headers.get("retry-after"));
+        await res.body?.cancel();
+        await sleep(wait);
         rateLimitAttempts += 1;
         continue;
       }
@@ -205,7 +259,7 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
         );
       }
 
-      return (await res.json()) as T;
+      return await res.json();
     }
   }
 
@@ -226,13 +280,10 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
       if (params.currencyCode !== undefined) search.set("currencyCode", params.currencyCode);
       if (params.max !== undefined) search.set("max", String(params.max));
 
-      const body = await request<AmadeusFlightOffersResponse>(
-        "/v2/shopping/flight-offers",
-        search,
-      );
+      const path = "/v2/shopping/flight-offers";
       // An empty result set is a legitimate answer (no route, no availability),
-      // so a missing `data` is [] rather than an error.
-      return body.data ?? [];
+      // so a missing `data` is [] rather than an error — see `unwrapData`.
+      return unwrapData<AmadeusFlightOffer>(await request(path, search), path);
     },
 
     async searchHotelOffers(params) {
@@ -244,11 +295,8 @@ export function createAmadeusClient(config: AmadeusClientConfig): AmadeusClient 
       if (params.checkOutDate !== undefined) search.set("checkOutDate", params.checkOutDate);
       if (params.currency !== undefined) search.set("currency", params.currency);
 
-      const body = await request<AmadeusHotelOffersResponse>(
-        "/v3/shopping/hotel-offers",
-        search,
-      );
-      return body.data ?? [];
+      const path = "/v3/shopping/hotel-offers";
+      return unwrapData<AmadeusHotelOfferEntry>(await request(path, search), path);
     },
   };
 }
